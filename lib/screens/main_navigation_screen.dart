@@ -191,13 +191,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.tropicalYellowLight,
-                borderRadius: BorderRadius.circular(8),
+            SizedBox(
+              height: 34,
+              child: Image.asset(
+                'assets/images/tropical_gyros_logo.png',
+                fit: BoxFit.contain,
               ),
-              child: const Text('🌴', style: TextStyle(fontSize: 16)),
             ),
             const SizedBox(width: 10),
             Column(

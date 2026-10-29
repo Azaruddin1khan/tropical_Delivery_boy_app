@@ -21,7 +21,9 @@ void main() {
     expect(find.text('History'), findsOneWidget);
   });
 
-  testWidgets('Assigned orders view and navigation test', (WidgetTester tester) async {
+  testWidgets('Assigned orders view and navigation test', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const DeliveryCashierApp());
 
     // Login
@@ -44,7 +46,9 @@ void main() {
     expect(find.text('Jerk Chicken Gyro'), findsOneWidget);
   });
 
-  testWidgets('Mark cash received local state test', (WidgetTester tester) async {
+  testWidgets('Mark cash received local state test', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const DeliveryCashierApp());
 
     // Login
@@ -93,7 +97,9 @@ void main() {
     expect(find.text('Simulate Scan Customer Barcode (Demo)'), findsOneWidget);
   });
 
-  testWidgets('Delivery history records view test', (WidgetTester tester) async {
+  testWidgets('Delivery history records view test', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const DeliveryCashierApp());
 
     // Login

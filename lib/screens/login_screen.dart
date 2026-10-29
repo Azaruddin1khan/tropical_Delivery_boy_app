@@ -93,21 +93,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Brand Emblem
+                  // Official Brand Logo
                   Center(
                     child: Container(
-                      width: 84,
-                      height: 84,
-                      decoration: BoxDecoration(
-                        color: AppColors.tropicalYellowLight,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.tropicalYellow,
-                          width: 2.5,
-                        ),
+                      constraints: const BoxConstraints(
+                        maxWidth: 240,
+                        maxHeight: 105,
                       ),
-                      child: const Center(
-                        child: Text('🌴', style: TextStyle(fontSize: 40)),
+                      child: Image.asset(
+                        'assets/images/tropical_gyros_logo.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
