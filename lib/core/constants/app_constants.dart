@@ -1,7 +1,7 @@
 class AppConstants {
   static const String appName = 'Tropical Gyros Staff';
   static const String appSubtitle = 'Delivery & Cashier Portal';
-  static const String currency = '\$';
+  static const String currency = 'BSD ';
 
   // Demo Notice Strings
   static const String demoNotice =

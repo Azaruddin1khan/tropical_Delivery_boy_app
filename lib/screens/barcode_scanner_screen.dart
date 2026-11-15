@@ -211,7 +211,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   children: [
                     Text(
                       order.requiresCashCollection
-                          ? 'Cash Due: \$${order.totalAmount.toStringAsFixed(2)}'
+                          ? 'Cash Due: ${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)}'
                           : 'Payment Already Verified (${order.paymentMethod})',
                       style: TextStyle(
                         fontSize: 13,

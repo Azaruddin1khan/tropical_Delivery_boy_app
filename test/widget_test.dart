@@ -62,7 +62,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     // Verify Cash Due button exists and scroll to it
-    final cashButton = find.text('Mark Cash Received (\$58.21)');
+    final cashButton = find.text('Mark Cash Received (${AppConstants.currency}58.21)');
     expect(cashButton, findsOneWidget);
     await tester.ensureVisible(cashButton);
     await tester.pump(const Duration(milliseconds: 200));
@@ -77,7 +77,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     // Verify cash button is gone (already paid)
-    expect(find.text('Mark Cash Received (\$58.21)'), findsNothing);
+    expect(find.text('Mark Cash Received (${AppConstants.currency}58.21)'), findsNothing);
   });
 
   testWidgets('Barcode scan screen tab test', (WidgetTester tester) async {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_constants.dart';
 import '../theme/app_colors.dart';
 
 class StatusChip extends StatelessWidget {
@@ -54,7 +55,7 @@ class StatusChip extends StatelessWidget {
 
   factory StatusChip.cashPending({required double amount}) {
     return StatusChip(
-      label: 'Collect Cash: \$${amount.toStringAsFixed(2)}',
+      label: 'Collect Cash: ${AppConstants.currency}${amount.toStringAsFixed(2)}',
       backgroundColor: AppColors.warningOrangeLight,
       textColor: AppColors.warningOrange,
       icon: Icons.payments_outlined,

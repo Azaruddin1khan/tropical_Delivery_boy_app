@@ -95,7 +95,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Cash payment of \$${order.totalAmount.toStringAsFixed(2)} marked as received! 💵',
+                    'Cash payment of ${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)} marked as received! 💵',
                   ),
                   backgroundColor: AppColors.limeGreenDark,
                 ),
@@ -116,7 +116,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         builder: (dialogCtx) => AlertDialog(
           title: const Text('⚠️ Pending Cash Collection'),
           content: Text(
-            'This order requires collecting \$${order.totalAmount.toStringAsFixed(2)} in cash.\n\nWould you like to mark cash as collected and finish delivery?',
+            'This order requires collecting ${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)} in cash.\n\nWould you like to mark cash as collected and finish delivery?',
           ),
           actions: [
             TextButton(
@@ -579,7 +579,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             const SizedBox(height: 10),
                             PrimaryButton(
                               text:
-                                  'Mark Cash Received (\$${order.totalAmount.toStringAsFixed(2)})',
+                                  'Mark Cash Received (${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)})',
                               icon: Icons.check_circle_outline_rounded,
                               variant: ButtonVariant.success,
                               width: double.infinity,
