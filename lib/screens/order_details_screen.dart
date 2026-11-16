@@ -8,6 +8,7 @@ import '../core/widgets/primary_button.dart';
 import '../core/widgets/status_chip.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_state_scope.dart';
+import 'delivery_route_map_screen.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
   final String orderId;
@@ -384,6 +385,32 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                               ),
                             ),
                           ],
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.oceanBlue,
+                                side: const BorderSide(color: AppColors.oceanBlue, width: 1.5),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                              icon: const Icon(Icons.navigation_rounded, size: 18),
+                              label: const Text(
+                                '🛰️ Open Live GPS Navigation Map',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => DeliveryRouteMapScreen(order: order),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),

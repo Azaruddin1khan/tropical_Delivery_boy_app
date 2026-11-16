@@ -12,6 +12,8 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   intl: ^0.20.3
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:
