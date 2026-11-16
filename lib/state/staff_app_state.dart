@@ -35,8 +35,8 @@ class StaffAppState extends ChangeNotifier {
       DeliveryOrder(
         id: 'TG-8092',
         customerName: 'Marcus Bennett',
-        customerPhone: '+1 (305) 555-0143',
-        deliveryAddress: '1420 Ocean Drive, Apt 3B, Miami Beach, FL 33139',
+        customerPhone: '+1 (242) 555-0143',
+        deliveryAddress: 'West Bay Street, Cable Beach, Nassau, Bahamas',
         orderTime: now.subtract(const Duration(minutes: 25)),
         items: const [
           OrderItem(
@@ -69,8 +69,8 @@ class StaffAppState extends ChangeNotifier {
       DeliveryOrder(
         id: 'TG-8095',
         customerName: 'Aaliyah Davis',
-        customerPhone: '+1 (305) 555-0188',
-        deliveryAddress: '1120 Collins Ave, Suite 6, Miami Beach, FL 33139',
+        customerPhone: '+1 (242) 555-0188',
+        deliveryAddress: 'East Bay Street, Harbour Central, Nassau, Bahamas',
         orderTime: now.subtract(const Duration(minutes: 15)),
         items: const [
           OrderItem(

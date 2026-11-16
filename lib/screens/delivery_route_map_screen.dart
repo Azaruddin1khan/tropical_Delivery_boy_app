@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
 
+import '../core/constants/nassau_route_data.dart';
 import '../core/theme/app_colors.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_state_scope.dart';
@@ -20,22 +22,14 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
   late final MapController _mapController;
   Timer? _simulationTimer;
 
-  // Nassau, Bahamas Standard Locations
-  static const ll.LatLng storeLocation = ll.LatLng(25.0478, -77.3554); // Bay St Flagship Store
-  static const ll.LatLng customerLocation = ll.LatLng(25.0680, -77.3950); // Customer Destination
+  // Nassau, Bahamas Key Landmarks
+  static final ll.LatLng storeLocation = kNassauStreetRoute.first;
+  static final ll.LatLng customerLocation = kNassauStreetRoute.last;
 
-  // Nassau delivery route waypoints
-  static const List<ll.LatLng> nassauRoute = [
-    ll.LatLng(25.0478, -77.3554), // Store
-    ll.LatLng(25.0515, -77.3620), // Downtown Bay St
-    ll.LatLng(25.0560, -77.3710), // Arawak Cay
-    ll.LatLng(25.0610, -77.3820), // Saunders Beach
-    ll.LatLng(25.0680, -77.3950), // Customer Address
-  ];
-
-  double _progress = 0.40;
-  int _speedKmh = 29;
+  double _progress = 0.35; // Start courier 35% along the road
+  int _speedKmh = 28;
   bool _isNavigating = true;
+  bool _autoFollow = true;
 
   @override
   void initState() {
@@ -52,49 +46,90 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
   }
 
   void _startGpsSimulation() {
-    _simulationTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    // Advances courier smoothly along real street nodes
+    _simulationTimer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
       if (!mounted || !_isNavigating) return;
 
       setState(() {
-        _progress += 0.04;
-        if (_progress >= 0.98) {
-          _progress = 0.98;
+        _progress += 0.015;
+        if (_progress >= 1.0) {
+          _progress = 0.999;
           _speedKmh = 0;
         } else {
-          _speedKmh = 24 + (_progress * 12).toInt() % 10;
+          // Dynamic speed variations around turns and straights
+          _speedKmh = 22 + (math.sin(_progress * 20) * 10).abs().toInt();
+        }
+
+        if (_autoFollow) {
+          _mapController.move(_currentCourierPosition, _mapController.camera.zoom);
         }
       });
     });
   }
 
   ll.LatLng get _currentCourierPosition {
-    if (nassauRoute.length < 2) return storeLocation;
-    final totalSegments = nassauRoute.length - 1;
-    final segment = (_progress * totalSegments).floor().clamp(0, totalSegments - 1);
-    final segmentProgress = (_progress * totalSegments) - segment;
+    if (kNassauStreetRoute.isEmpty) return storeLocation;
+    final totalNodes = kNassauStreetRoute.length - 1;
+    final floatIndex = (_progress * totalNodes).clamp(0.0, totalNodes.toDouble());
+    final index = floatIndex.floor().clamp(0, totalNodes - 1);
+    final frac = floatIndex - index;
 
-    final p1 = nassauRoute[segment];
-    final p2 = nassauRoute[segment + 1];
+    final p1 = kNassauStreetRoute[index];
+    final p2 = kNassauStreetRoute[index + 1];
 
-    final lat = p1.latitude + (p2.latitude - p1.latitude) * segmentProgress;
-    final lng = p1.longitude + (p2.longitude - p1.longitude) * segmentProgress;
+    final lat = p1.latitude + (p2.latitude - p1.latitude) * frac;
+    final lng = p1.longitude + (p2.longitude - p1.longitude) * frac;
 
     return ll.LatLng(lat, lng);
+  }
+
+  double get _currentHeadingAngle {
+    if (kNassauStreetRoute.length < 2) return 0.0;
+    final totalNodes = kNassauStreetRoute.length - 1;
+    final index = (_progress * totalNodes).floor().clamp(0, totalNodes - 1);
+    final p1 = kNassauStreetRoute[index];
+    final p2 = kNassauStreetRoute[index + 1];
+
+    final dLng = (p2.longitude - p1.longitude) * (math.pi / 180.0);
+    final lat1 = p1.latitude * (math.pi / 180.0);
+    final lat2 = p2.latitude * (math.pi / 180.0);
+
+    final y = math.sin(dLng) * math.cos(lat2);
+    final x = math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLng);
+
+    return math.atan2(y, x);
+  }
+
+  String get _turnByTurnInstruction {
+    if (_progress < 0.15) {
+      return 'Head West on Bay Street towards Downtown';
+    } else if (_progress < 0.45) {
+      return 'Follow West Bay Street curve along the coast';
+    } else if (_progress < 0.75) {
+      return 'Continue straight past Saunders Beach on West Bay St';
+    } else if (_progress < 0.95) {
+      return 'In 150m, prepare to turn into Customer Gate';
+    } else {
+      return 'You have arrived at Customer Destination!';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final courierPos = _currentCourierPosition;
+    final headingAngle = _currentHeadingAngle;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
-          'Live Route Navigation • #${widget.order.id}',
+          'Live Street Navigation • #${widget.order.id}',
           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
         ),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textDark,
-        elevation: 1,
+        elevation: 0.5,
         actions: [
           IconButton(
             icon: Icon(
@@ -113,12 +148,12 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
       ),
       body: Stack(
         children: [
-          // 1. Full-Screen Interactive OpenStreetMap Engine
+          // 1. Full-Screen Interactive OpenStreetMap with Street-Snapped Routing
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
               initialCenter: courierPos,
-              initialZoom: 14.2,
+              initialZoom: 15.2,
               minZoom: 11.0,
               maxZoom: 18.0,
               interactionOptions: const InteractionOptions(
@@ -126,68 +161,77 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
               ),
             ),
             children: [
-              // Free OpenStreetMap Tiles (Zero Watermark)
+              // 100% Free OpenStreetMap Clean Tiles (Zero Watermark)
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.tropicalgyros.courier',
                 maxZoom: 19,
               ),
 
-              // 3.0-Mile Strict Operational Dispatch Boundary
+              // Strict 3.0-Mile Dispatch Boundary Circle
               CircleLayer(
                 circles: [
                   CircleMarker(
                     point: storeLocation,
-                    radius: 4828, // 3.0 miles in meters
+                    radius: 4828,
                     useRadiusInMeter: true,
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.07),
-                    borderColor: const Color(0xFFF59E0B).withValues(alpha: 0.7),
-                    borderStrokeWidth: 1.6,
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.05),
+                    borderColor: const Color(0xFFF59E0B).withValues(alpha: 0.6),
+                    borderStrokeWidth: 1.5,
                   ),
                 ],
               ),
 
-              // Route Polyline Connecting Store to Customer
+              // Real Road-Snapped Polyline (Turn-by-turn road geometry)
               PolylineLayer(
                 polylines: [
+                  // Outer Glow / Border for High Contrast
                   Polyline(
-                    points: nassauRoute,
-                    color: AppColors.oceanBlue,
-                    strokeWidth: 5.0,
-                    borderStrokeWidth: 2.5,
-                    borderColor: AppColors.oceanBlueDark.withValues(alpha: 0.35),
+                    points: kNassauStreetRoute,
+                    color: const Color(0xFF1565C0).withValues(alpha: 0.4),
+                    strokeWidth: 8.0,
+                    strokeCap: StrokeCap.round,
+                    strokeJoin: StrokeJoin.round,
+                  ),
+                  // Vibrant Blue Road Route (Like Google Maps / Image 2)
+                  Polyline(
+                    points: kNassauStreetRoute,
+                    color: const Color(0xFF1E88E5),
+                    strokeWidth: 5.2,
+                    strokeCap: StrokeCap.round,
+                    strokeJoin: StrokeJoin.round,
                   ),
                 ],
               ),
 
-              // Map Markers
+              // Markers Layer
               MarkerLayer(
                 markers: [
-                  // A. Flagship Store Marker
+                  // A. TG Flagship Kitchen Store Marker
                   Marker(
                     point: storeLocation,
-                    width: 70,
+                    width: 75,
                     height: 50,
                     alignment: Alignment.topCenter,
                     child: _buildStorePin(),
                   ),
 
-                  // B. Customer Destination Marker
+                  // B. Customer Doorstep Marker (Black Home Pin like Image 2)
                   Marker(
                     point: customerLocation,
-                    width: 70,
-                    height: 50,
+                    width: 75,
+                    height: 52,
                     alignment: Alignment.topCenter,
                     child: _buildCustomerPin(),
                   ),
 
-                  // C. Moving Courier Marker
+                  // C. Moving Vehicle Marker (Red Scooter rotated to street heading)
                   Marker(
                     point: courierPos,
                     width: 80,
-                    height: 55,
-                    alignment: Alignment.topCenter,
-                    child: _buildCourierPin(_speedKmh),
+                    height: 58,
+                    alignment: Alignment.center,
+                    child: _buildCourierPin(_speedKmh, headingAngle),
                   ),
                 ],
               ),
@@ -202,12 +246,12 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F172A),
+                color: const Color(0xFF0F172A), // Dark slate like Image 1
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 10,
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -232,9 +276,9 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'In 350m, continue on West Bay St',
-                          style: TextStyle(
+                        Text(
+                          _turnByTurnInstruction,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -242,7 +286,7 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Towards: ${widget.order.deliveryAddress}',
+                          'Destination: ${widget.order.deliveryAddress}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -273,22 +317,25 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
             ),
           ),
 
-          // 3. Floating Recenter GPS Button
+          // 3. Floating Recenter / Auto-Follow Toggle Button
           Positioned(
             right: 16,
             bottom: 230,
             child: FloatingActionButton.small(
               backgroundColor: Colors.white,
-              foregroundColor: AppColors.oceanBlueDark,
+              foregroundColor: _autoFollow ? AppColors.oceanBlueDark : AppColors.textSecondary,
               elevation: 4,
               onPressed: () {
-                _mapController.move(courierPos, 15.0);
+                setState(() {
+                  _autoFollow = true;
+                });
+                _mapController.move(courierPos, 15.5);
               },
-              child: const Icon(Icons.my_location_rounded),
+              child: Icon(_autoFollow ? Icons.my_location_rounded : Icons.location_searching_rounded),
             ),
           ),
 
-          // 4. Bottom Order Dispatch & Delivery Panel
+          // 4. Bottom Order Dispatch & Doorstep Delivery Panel
           Positioned(
             bottom: 16,
             left: 14,
@@ -300,8 +347,8 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
                 borderRadius: BorderRadius.circular(22),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.14),
-                    blurRadius: 16,
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 18,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -414,18 +461,25 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(5),
             border: Border.all(color: AppColors.border, width: 0.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 3,
+              ),
+            ],
           ),
           child: const Text(
             'TG Store',
-            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
           ),
         ),
         const SizedBox(height: 1),
         Container(
           padding: const EdgeInsets.all(4),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppColors.warningOrange,
             shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 1.5),
           ),
           child: const Icon(Icons.restaurant, color: Colors.white, size: 12),
         ),
@@ -433,6 +487,7 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
     );
   }
 
+  // Black teardrop home pin matching screenshot 2
   Widget _buildCustomerPin() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -443,26 +498,46 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(5),
             border: Border.all(color: AppColors.border, width: 0.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 3,
+              ),
+            ],
           ),
           child: const Text(
             'Customer',
-            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
           ),
         ),
         const SizedBox(height: 1),
         Container(
-          padding: const EdgeInsets.all(4),
-          decoration: const BoxDecoration(
-            color: AppColors.limeGreenDark,
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A), // Black icon pin like screenshot 2
             shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: const Icon(Icons.home, color: Colors.white, size: 12),
+          child: const Icon(
+            Icons.home_rounded,
+            color: Colors.white,
+            size: 16,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildCourierPin(int speed) {
+  // Red Scooter vehicle marker rotated to street heading angle (matching screenshot 2)
+  Widget _buildCourierPin(int speed, double heading) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -471,6 +546,12 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFF0F172A),
             borderRadius: BorderRadius.circular(5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 4,
+              ),
+            ],
           ),
           child: Text(
             '$speed km/h',
@@ -481,15 +562,30 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 1),
-        Container(
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: AppColors.oceanBlue,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 1.8),
+        const SizedBox(height: 2),
+        Transform.rotate(
+          angle: heading,
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFDC2626), // Red Scooter like screenshot 2
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2.2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withValues(alpha: 0.45),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.two_wheeler_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
-          child: const Icon(Icons.delivery_dining, color: Colors.white, size: 14),
         ),
       ],
     );
