@@ -222,11 +222,11 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                         child: _buildCustomerPin(),
                       ),
 
-                      // C. Buttery Smooth 60 FPS Gliding Red Scooter
+                      // C. Buttery Smooth 60 FPS Gliding 3D Courier Scooter
                       Marker(
                         point: courierPos,
-                        width: 80,
-                        height: 58,
+                        width: 70,
+                        height: 95,
                         alignment: Alignment.center,
                         child: _buildCourierPin(speed, heading),
                       ),
@@ -542,55 +542,59 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
     );
   }
 
-  // Red Scooter vehicle marker rotated to street heading angle (smooth 60fps)
+  // 3D Isometric Green Courier on Scooter (matching reference icon)
   Widget _buildCourierPin(int speed, double heading) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Speed Tag Pill
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
             color: const Color(0xFF0F172A),
-            borderRadius: BorderRadius.circular(5),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 0.8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 4,
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 5,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Text(
-            '$speed km/h',
-            style: const TextStyle(
-              fontSize: 8,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFFBBF24),
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 5,
+                height: 5,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF10B981),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '$speed km/h',
+                style: const TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFFFBBF24),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 2),
+
+        // 3D Isometric Green Courier on Scooter
         Transform.rotate(
           angle: heading,
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFDC2626), // Red Scooter
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2.2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.red.withValues(alpha: 0.45),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.two_wheeler_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
+          child: Image.asset(
+            'assets/images/delivery_boy_3d.png',
+            width: 52,
+            height: 70,
+            fit: BoxFit.contain,
           ),
         ),
       ],
