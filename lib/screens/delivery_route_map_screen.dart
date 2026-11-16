@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
@@ -54,7 +55,10 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
   ll.LatLng _getCourierPosition(double progress) {
     if (kNassauStreetRoute.isEmpty) return storeLocation;
     final totalNodes = kNassauStreetRoute.length - 1;
-    final floatIndex = (progress * totalNodes).clamp(0.0, totalNodes.toDouble());
+    final floatIndex = (progress * totalNodes).clamp(
+      0.0,
+      totalNodes.toDouble(),
+    );
     final index = floatIndex.floor().clamp(0, totalNodes - 1);
     final frac = floatIndex - index;
 
@@ -80,7 +84,8 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
     final lat2 = p2.latitude * (math.pi / 180.0);
 
     final y = math.sin(dLng) * math.cos(lat2);
-    final x = math.cos(lat1) * math.sin(lat2) -
+    final x =
+        math.cos(lat1) * math.sin(lat2) -
         math.sin(lat1) * math.cos(lat2) * math.cos(dLng);
 
     return math.atan2(y, x);
@@ -118,8 +123,12 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
         actions: [
           IconButton(
             icon: Icon(
-              _isNavigating ? Icons.pause_circle_rounded : Icons.play_circle_fill_rounded,
-              color: _isNavigating ? AppColors.tropicalYellowDark : AppColors.limeGreenDark,
+              _isNavigating
+                  ? Icons.pause_circle_rounded
+                  : Icons.play_circle_fill_rounded,
+              color: _isNavigating
+                  ? AppColors.tropicalYellowDark
+                  : AppColors.limeGreenDark,
               size: 26,
             ),
             tooltip: _isNavigating ? 'Pause GPS Stream' : 'Resume GPS Stream',
@@ -251,7 +260,10 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                 final speed = 24 + (math.sin(t * 12) * 8).abs().toInt();
 
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF0F172A),
                     borderRadius: BorderRadius.circular(18),
@@ -305,7 +317,10 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
@@ -404,13 +419,20 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                       ),
                       IconButton(
                         style: IconButton.styleFrom(
-                          backgroundColor: AppColors.limeGreen.withValues(alpha: 0.15),
+                          backgroundColor: AppColors.limeGreen.withValues(
+                            alpha: 0.15,
+                          ),
                         ),
-                        icon: const Icon(Icons.phone_rounded, color: AppColors.limeGreenDark),
+                        icon: const Icon(
+                          Icons.phone_rounded,
+                          color: AppColors.limeGreenDark,
+                        ),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Calling customer ${widget.order.customerPhone} 📞'),
+                              content: Text(
+                                'Calling customer ${widget.order.customerPhone} 📞',
+                              ),
                               duration: const Duration(seconds: 1),
                             ),
                           );
@@ -425,11 +447,16 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                     height: 52,
                     onDelivered: () {
                       final state = StaffStateScope.read(context);
-                      state.updateOrderStatus(widget.order.id, DeliveryOrderStatus.delivered);
+                      state.updateOrderStatus(
+                        widget.order.id,
+                        DeliveryOrderStatus.delivered,
+                      );
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Order #${widget.order.id} marked as Delivered! 🎉'),
+                          content: Text(
+                            'Order #${widget.order.id} marked as Delivered! 🎉',
+                          ),
                           backgroundColor: AppColors.limeGreenDark,
                         ),
                       );
@@ -463,7 +490,11 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
           ),
           child: const Text(
             'TG Store',
-            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+            style: TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
           ),
         ),
         const SizedBox(height: 1),
@@ -500,7 +531,11 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
           ),
           child: const Text(
             'Home',
-            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+            style: TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
           ),
         ),
         const SizedBox(height: 1),
@@ -519,11 +554,7 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
               ),
             ],
           ),
-          child: const Icon(
-            Icons.home_rounded,
-            color: Colors.white,
-            size: 16,
-          ),
+          child: const Icon(Icons.home_rounded, color: Colors.white, size: 16),
         ),
       ],
     );
@@ -540,7 +571,10 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
           decoration: BoxDecoration(
             color: const Color(0xFF0F172A),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 0.8),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.2),
+              width: 0.8,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.35),
