@@ -1,26 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// A modern interactive "Swipe to Deliver" slider button matching reference design:
-/// - Rounded purple/indigo pill container
+import '../core/theme/app_colors.dart';
+
+/// A modern interactive "Swipe to Deliver" slider button styled to match the Tropical Gyros theme:
+/// - Rounded pill container with brand lime green gradient
 /// - Centered bold "Delivered" label that gently fades on swipe
-/// - Circular white draggable handle with '>' chevron
+/// - Circular white draggable handle with '>' chevron in theme color
 /// - Spring-back physics if released early (<75%)
 /// - Heavy haptic vibration & instant delivery confirmation on full swipe
 class SwipeToDeliverButton extends StatefulWidget {
   final VoidCallback onDelivered;
   final String label;
   final double height;
-  final Color baseColor;
+  final List<Color>? gradientColors;
   final Color thumbColor;
+  final Color? iconColor;
 
   const SwipeToDeliverButton({
     super.key,
     required this.onDelivered,
     this.label = 'Delivered',
     this.height = 54.0,
-    this.baseColor = const Color(0xFF6B58D8),
+    this.gradientColors,
     this.thumbColor = Colors.white,
+    this.iconColor,
   });
 
   @override
@@ -91,6 +95,16 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
 
   @override
   Widget build(BuildContext context) {
+    // Theme-matched gradient (Vibrant Emerald / Lime Green)
+    final colors = widget.gradientColors ??
+        const [
+          Color(0xFF22C55E),
+          AppColors.limeGreen,
+          AppColors.limeGreenDark,
+        ];
+
+    final chevronColor = widget.iconColor ?? AppColors.limeGreenDark;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final totalWidth = constraints.maxWidth;
@@ -106,20 +120,15 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
             height: widget.height,
             width: totalWidth,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFF6351CE),
-                  Color(0xFF6B58D8),
-                  Color(0xFF755EE8),
-                  Color(0xFF7F63EF),
-                ],
+              gradient: LinearGradient(
+                colors: colors,
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
               borderRadius: BorderRadius.circular(widget.height / 2),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF6B58D8).withValues(alpha: 0.38),
+                  color: AppColors.limeGreen.withValues(alpha: 0.38),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -138,7 +147,7 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
                         color: Colors.white,
                         fontSize: 16.5,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
+                        letterSpacing: 0.4,
                       ),
                     ),
                   ),
@@ -165,7 +174,7 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
                     child: Center(
                       child: Icon(
                         _isCompleted ? Icons.check_rounded : Icons.chevron_right_rounded,
-                        color: const Color(0xFF6B58D8),
+                        color: chevronColor,
                         size: 28,
                       ),
                     ),

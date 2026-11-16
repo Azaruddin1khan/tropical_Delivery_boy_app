@@ -430,7 +430,7 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Order #${widget.order.id} marked as Delivered! 🎉'),
-                          backgroundColor: const Color(0xFF6B58D8),
+                          backgroundColor: AppColors.limeGreenDark,
                         ),
                       );
                     },
