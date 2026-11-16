@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -18,59 +17,43 @@ class DeliveryRouteMapScreen extends StatefulWidget {
   State<DeliveryRouteMapScreen> createState() => _DeliveryRouteMapScreenState();
 }
 
-class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
+class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
+    with SingleTickerProviderStateMixin {
   late final MapController _mapController;
-  Timer? _simulationTimer;
+  late final AnimationController _animController;
 
   // Nassau, Bahamas Key Landmarks
   static final ll.LatLng storeLocation = kNassauStreetRoute.first;
   static final ll.LatLng customerLocation = kNassauStreetRoute.last;
 
-  double _progress = 0.35; // Start courier 35% along the road
-  int _speedKmh = 28;
   bool _isNavigating = true;
-  bool _autoFollow = true;
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
-    _startGpsSimulation();
+
+    // 60 FPS Buttery-Smooth Continuous Route Animation (Zero Lag, Zero Hang)
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 50),
+    );
+
+    _animController.repeat();
   }
 
   @override
   void dispose() {
-    _simulationTimer?.cancel();
+    _animController.dispose();
     _mapController.dispose();
     super.dispose();
   }
 
-  void _startGpsSimulation() {
-    // Advances courier smoothly along real street nodes
-    _simulationTimer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
-      if (!mounted || !_isNavigating) return;
-
-      setState(() {
-        _progress += 0.015;
-        if (_progress >= 1.0) {
-          _progress = 0.999;
-          _speedKmh = 0;
-        } else {
-          // Dynamic speed variations around turns and straights
-          _speedKmh = 22 + (math.sin(_progress * 20) * 10).abs().toInt();
-        }
-
-        if (_autoFollow) {
-          _mapController.move(_currentCourierPosition, _mapController.camera.zoom);
-        }
-      });
-    });
-  }
-
-  ll.LatLng get _currentCourierPosition {
+  // Smooth position interpolation across 407 street nodes (at 60 FPS)
+  ll.LatLng _getCourierPosition(double progress) {
     if (kNassauStreetRoute.isEmpty) return storeLocation;
     final totalNodes = kNassauStreetRoute.length - 1;
-    final floatIndex = (_progress * totalNodes).clamp(0.0, totalNodes.toDouble());
+    final floatIndex = (progress * totalNodes).clamp(0.0, totalNodes.toDouble());
     final index = floatIndex.floor().clamp(0, totalNodes - 1);
     final frac = floatIndex - index;
 
@@ -83,10 +66,11 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
     return ll.LatLng(lat, lng);
   }
 
-  double get _currentHeadingAngle {
+  // Smooth bearing / rotation angle calculation along street curves
+  double _getHeadingAngle(double progress) {
     if (kNassauStreetRoute.length < 2) return 0.0;
     final totalNodes = kNassauStreetRoute.length - 1;
-    final index = (_progress * totalNodes).floor().clamp(0, totalNodes - 1);
+    final index = (progress * totalNodes).floor().clamp(0, totalNodes - 1);
     final p1 = kNassauStreetRoute[index];
     final p2 = kNassauStreetRoute[index + 1];
 
@@ -101,24 +85,24 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
     return math.atan2(y, x);
   }
 
-  String get _turnByTurnInstruction {
-    if (_progress < 0.15) {
+  String _getInstruction(double progress) {
+    if (progress < 0.15) {
       return 'Head West on Bay Street towards Downtown';
-    } else if (_progress < 0.45) {
+    } else if (progress < 0.45) {
       return 'Follow West Bay Street curve along the coast';
-    } else if (_progress < 0.75) {
+    } else if (progress < 0.75) {
       return 'Continue straight past Saunders Beach on West Bay St';
-    } else if (_progress < 0.95) {
+    } else if (progress < 0.95) {
       return 'In 150m, prepare to turn into Customer Gate';
     } else {
-      return 'You have arrived at Customer Destination!';
+      return 'Arriving at Customer Doorstep!';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final courierPos = _currentCourierPosition;
-    final headingAngle = _currentHeadingAngle;
+    // Initial camera centered comfortably on Nassau route
+    const initialCenter = ll.LatLng(25.0590, -77.3750);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -141,6 +125,11 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
             onPressed: () {
               setState(() {
                 _isNavigating = !_isNavigating;
+                if (_isNavigating) {
+                  _animController.repeat();
+                } else {
+                  _animController.stop();
+                }
               });
             },
           ),
@@ -148,20 +137,20 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
       ),
       body: Stack(
         children: [
-          // 1. Full-Screen Interactive OpenStreetMap with Street-Snapped Routing
+          // 1. High-Performance OpenStreetMap (Tiles & Polyline NEVER rebuild on ticks!)
           FlutterMap(
             mapController: _mapController,
-            options: MapOptions(
-              initialCenter: courierPos,
-              initialZoom: 15.2,
+            options: const MapOptions(
+              initialCenter: initialCenter,
+              initialZoom: 14.0,
               minZoom: 11.0,
               maxZoom: 18.0,
-              interactionOptions: const InteractionOptions(
+              interactionOptions: InteractionOptions(
                 flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
               ),
             ),
             children: [
-              // 100% Free OpenStreetMap Clean Tiles (Zero Watermark)
+              // Clean OSM Tiles (100% Free, Zero Watermark, Cached & Smooth)
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.tropicalgyros.courier',
@@ -182,18 +171,18 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
                 ],
               ),
 
-              // Real Road-Snapped Polyline (Turn-by-turn road geometry)
+              // Real Road-Snapped Route (Static 60 FPS GPU rendered)
               PolylineLayer(
                 polylines: [
-                  // Outer Glow / Border for High Contrast
+                  // Outer subtle border
                   Polyline(
                     points: kNassauStreetRoute,
-                    color: const Color(0xFF1565C0).withValues(alpha: 0.4),
+                    color: const Color(0xFF1565C0).withValues(alpha: 0.35),
                     strokeWidth: 8.0,
                     strokeCap: StrokeCap.round,
                     strokeJoin: StrokeJoin.round,
                   ),
-                  // Vibrant Blue Road Route (Like Google Maps / Image 2)
+                  // Vibrant Blue Road Route (Like Google Maps / Reference Screenshot)
                   Polyline(
                     points: kNassauStreetRoute,
                     color: const Color(0xFF1E88E5),
@@ -204,134 +193,151 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
                 ],
               ),
 
-              // Markers Layer
-              MarkerLayer(
-                markers: [
-                  // A. TG Flagship Kitchen Store Marker
-                  Marker(
-                    point: storeLocation,
-                    width: 75,
-                    height: 50,
-                    alignment: Alignment.topCenter,
-                    child: _buildStorePin(),
-                  ),
+              // Markers Layer: ONLY the moving marker is rebuilt at 60 FPS!
+              AnimatedBuilder(
+                animation: _animController,
+                builder: (context, _) {
+                  final t = _animController.value;
+                  final courierPos = _getCourierPosition(t);
+                  final heading = _getHeadingAngle(t);
+                  final speed = 24 + (math.sin(t * 12) * 8).abs().toInt();
 
-                  // B. Customer Doorstep Marker (Black Home Pin like Image 2)
-                  Marker(
-                    point: customerLocation,
-                    width: 75,
-                    height: 52,
-                    alignment: Alignment.topCenter,
-                    child: _buildCustomerPin(),
-                  ),
+                  return MarkerLayer(
+                    markers: [
+                      // A. TG Flagship Kitchen Store
+                      Marker(
+                        point: storeLocation,
+                        width: 75,
+                        height: 50,
+                        alignment: Alignment.topCenter,
+                        child: _buildStorePin(),
+                      ),
 
-                  // C. Moving Vehicle Marker (Red Scooter rotated to street heading)
-                  Marker(
-                    point: courierPos,
-                    width: 80,
-                    height: 58,
-                    alignment: Alignment.center,
-                    child: _buildCourierPin(_speedKmh, headingAngle),
-                  ),
-                ],
+                      // B. Customer Doorstep (Black Home Pin like Reference Screenshot)
+                      Marker(
+                        point: customerLocation,
+                        width: 75,
+                        height: 52,
+                        alignment: Alignment.topCenter,
+                        child: _buildCustomerPin(),
+                      ),
+
+                      // C. Buttery Smooth 60 FPS Gliding Red Scooter
+                      Marker(
+                        point: courierPos,
+                        width: 80,
+                        height: 58,
+                        alignment: Alignment.center,
+                        child: _buildCourierPin(speed, heading),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
 
-          // 2. Top Turn-by-Turn Guidance Banner
+          // 2. Top Turn-by-Turn Guidance Banner (Updated smoothly via AnimatedBuilder)
           Positioned(
             top: 14,
             left: 14,
             right: 14,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F172A), // Dark slate like Image 1
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+            child: AnimatedBuilder(
+              animation: _animController,
+              builder: (context, _) {
+                final t = _animController.value;
+                final instruction = _getInstruction(t);
+                final speed = 24 + (math.sin(t * 12) * 8).abs().toInt();
+
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.limeGreenDark,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.turn_slight_right_rounded,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _turnByTurnInstruction,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.limeGreenDark,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Destination: ${widget.order.deliveryAddress}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: const Icon(
+                          Icons.turn_slight_right_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              instruction,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Destination: ${widget.order.deliveryAddress}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '$speed km/h',
                           style: const TextStyle(
-                            color: Colors.white70,
+                            color: Color(0xFFFBBF24),
+                            fontWeight: FontWeight.w900,
                             fontSize: 11,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$_speedKmh km/h',
-                      style: const TextStyle(
-                        color: Color(0xFFFBBF24),
-                        fontWeight: FontWeight.w900,
-                        fontSize: 11,
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
 
-          // 3. Floating Recenter / Auto-Follow Toggle Button
+          // 3. Floating Recenter Courier Button
           Positioned(
             right: 16,
             bottom: 230,
             child: FloatingActionButton.small(
               backgroundColor: Colors.white,
-              foregroundColor: _autoFollow ? AppColors.oceanBlueDark : AppColors.textSecondary,
+              foregroundColor: AppColors.oceanBlueDark,
               elevation: 4,
               onPressed: () {
-                setState(() {
-                  _autoFollow = true;
-                });
-                _mapController.move(courierPos, 15.5);
+                final currentPos = _getCourierPosition(_animController.value);
+                _mapController.move(currentPos, 15.2);
               },
-              child: Icon(_autoFollow ? Icons.my_location_rounded : Icons.location_searching_rounded),
+              child: const Icon(Icons.my_location_rounded),
             ),
           ),
 
@@ -487,7 +493,7 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
     );
   }
 
-  // Black teardrop home pin matching screenshot 2
+  // Black teardrop home pin matching reference screenshot
   Widget _buildCustomerPin() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -506,7 +512,7 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
             ],
           ),
           child: const Text(
-            'Customer',
+            'Home',
             style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
           ),
         ),
@@ -515,7 +521,7 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A), // Black icon pin like screenshot 2
+            color: const Color(0xFF0F172A),
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 2),
             boxShadow: [
@@ -536,7 +542,7 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
     );
   }
 
-  // Red Scooter vehicle marker rotated to street heading angle (matching screenshot 2)
+  // Red Scooter vehicle marker rotated to street heading angle (smooth 60fps)
   Widget _buildCourierPin(int speed, double heading) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -569,7 +575,7 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFFDC2626), // Red Scooter like screenshot 2
+              color: const Color(0xFFDC2626), // Red Scooter
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2.2),
               boxShadow: [

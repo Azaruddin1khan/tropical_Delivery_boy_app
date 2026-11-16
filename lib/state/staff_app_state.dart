@@ -153,8 +153,8 @@ class StaffAppState extends ChangeNotifier {
       DeliveryOrder(
         id: 'TG-8076',
         customerName: 'Elena Rostova',
-        customerPhone: '+1 (305) 555-0131',
-        deliveryAddress: '1500 Washington Ave, Miami Beach, FL',
+        customerPhone: '+1 (242) 555-0131',
+        deliveryAddress: 'West Bay Street, Cable Beach, Nassau, Bahamas',
         orderTime: now.subtract(const Duration(hours: 3)),
         deliveredAt: now.subtract(const Duration(hours: 2, minutes: 10)),
         items: const [
