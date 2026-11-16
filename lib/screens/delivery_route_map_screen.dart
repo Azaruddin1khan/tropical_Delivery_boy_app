@@ -7,6 +7,7 @@ import '../core/constants/nassau_route_data.dart';
 import '../core/theme/app_colors.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_state_scope.dart';
+import '../widgets/swipe_to_deliver_button.dart';
 
 class DeliveryRouteMapScreen extends StatefulWidget {
   final DeliveryOrder order;
@@ -418,35 +419,21 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                     ],
                   ),
                   const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.limeGreen,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                  // Interactive "Swipe to Deliver" slider matching reference design
+                  SwipeToDeliverButton(
+                    label: 'Delivered',
+                    height: 52,
+                    onDelivered: () {
+                      final state = StaffStateScope.read(context);
+                      state.updateOrderStatus(widget.order.id, DeliveryOrderStatus.delivered);
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Order #${widget.order.id} marked as Delivered! 🎉'),
+                          backgroundColor: const Color(0xFF6B58D8),
                         ),
-                        elevation: 0,
-                      ),
-                      icon: const Icon(Icons.check_circle_outline_rounded, size: 20),
-                      label: const Text(
-                        'Mark Order Delivered at Doorstep',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      onPressed: () {
-                        final state = StaffStateScope.read(context);
-                        state.updateOrderStatus(widget.order.id, DeliveryOrderStatus.delivered);
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Order #${widget.order.id} marked as Delivered! 🎉'),
-                            backgroundColor: AppColors.limeGreenDark,
-                          ),
-                        );
-                      },
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -587,15 +574,25 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
         ),
         const SizedBox(height: 2),
 
-        // 3D Isometric Green Courier on Scooter
-        Transform.rotate(
-          angle: heading,
-          child: Image.asset(
-            'assets/images/delivery_boy_3d.png',
-            width: 52,
-            height: 70,
-            fit: BoxFit.contain,
-          ),
+        // 3D Isometric Green Courier on Scooter (Upright & smooth corner leaning)
+        Builder(
+          builder: (context) {
+            final isWestbound = math.sin(heading) < 0;
+            final banking = (math.cos(heading) * 0.12).clamp(-0.16, 0.16);
+
+            return Transform.rotate(
+              angle: banking,
+              child: Transform.scale(
+                scaleX: isWestbound ? -1.0 : 1.0,
+                child: Image.asset(
+                  'assets/images/delivery_boy_3d.png',
+                  width: 54,
+                  height: 72,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            );
+          },
         ),
       ],
     );

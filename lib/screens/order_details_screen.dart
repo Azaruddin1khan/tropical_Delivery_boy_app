@@ -8,6 +8,7 @@ import '../core/widgets/primary_button.dart';
 import '../core/widgets/status_chip.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_state_scope.dart';
+import '../widgets/swipe_to_deliver_button.dart';
 import 'delivery_route_map_screen.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
@@ -693,16 +694,20 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                         width: double.infinity,
                         onPressed: () => _handleMarkOutForDelivery(order),
                       )
-                    else
+                    else if (order.orderType == 'pickup')
                       PrimaryButton(
-                        text: order.orderType == 'pickup'
-                            ? 'Complete Customer Pickup'
-                            : 'Mark Order as Delivered',
+                        text: 'Complete Customer Pickup',
                         icon: Icons.check_circle_rounded,
                         variant: ButtonVariant.success,
                         isLoading: _isProcessing,
                         width: double.infinity,
                         onPressed: () => _handleConfirmDelivered(order),
+                      )
+                    else
+                      SwipeToDeliverButton(
+                        label: 'Delivered',
+                        height: 52,
+                        onDelivered: () => _handleConfirmDelivered(order),
                       ),
                   ],
                 ),
