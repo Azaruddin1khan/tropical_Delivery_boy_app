@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
@@ -24,8 +25,10 @@ class BarcodeScannerScreen extends StatefulWidget {
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
+  late final MobileScannerController _scannerController;
   final _manualInputController = TextEditingController();
   bool _isFlashOn = false;
+  bool _isProcessingScan = false;
 
   @override
   void initState() {
@@ -34,6 +37,13 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    _scannerController = MobileScannerController(
+      autoStart: true,
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+      returnImage: false,
+    );
 
     if (widget.targetOrderCode != null) {
       _manualInputController.text = widget.targetOrderCode!;
@@ -48,14 +58,41 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   @override
   void dispose() {
     _animController.dispose();
+    _scannerController.dispose();
     _manualInputController.dispose();
     super.dispose();
+  }
+
+  void _handleLiveScanDetected(String rawCode) {
+    if (_isProcessingScan) return;
+    _isProcessingScan = true;
+
+    final state = StaffStateScope.read(context);
+    final order = state.findOrderByCode(rawCode);
+
+    if (order != null) {
+      _showScanResultBottomSheet(context, order);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Scanned code "$rawCode" — no matching active order found.'),
+          backgroundColor: AppColors.warningOrange,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() => _isProcessingScan = false);
+        }
+      });
+    }
   }
 
   void _onSimulateScan(
     BuildContext context, {
     String? sampleCode,
   }) {
+    if (_isProcessingScan) return;
     final state = StaffStateScope.read(context);
     DeliveryOrder? order;
     if (sampleCode != null && sampleCode.isNotEmpty) {
@@ -137,6 +174,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   void _showScanResultBottomSheet(BuildContext context, DeliveryOrder order) {
+    _isProcessingScan = true;
     final isKitchenPickup = order.status == DeliveryOrderStatus.assigned &&
         order.orderType == 'delivery';
     final isDoorstepHandover =
@@ -150,7 +188,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (bottomSheetContext) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -487,7 +525,13 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           ),
         ),
       ),
-    );
+    ).then((_) {
+      if (mounted) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) setState(() => _isProcessingScan = false);
+        });
+      }
+    });
   }
 
   @override
@@ -507,7 +551,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               child: Column(
                 children: [
                   const DemoBanner(
-                    label: 'PICKUP BARCODE SCANNER • UI-Only Prototype',
+                    label: 'PICKUP BARCODE SCANNER • Live Camera & QR Engine',
                   ),
                   const SizedBox(height: 6),
                   Row(
@@ -532,18 +576,23 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                               ? AppColors.tropicalYellow
                               : Colors.white70,
                         ),
-                        onPressed: () {
+                        onPressed: () async {
                           setState(() => _isFlashOn = !_isFlashOn);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                _isFlashOn
-                                    ? 'Simulated Torch ON 💡'
-                                    : 'Simulated Torch OFF',
+                          try {
+                            await _scannerController.toggleTorch();
+                          } catch (_) {}
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  _isFlashOn
+                                      ? 'Camera Torch ON 💡'
+                                      : 'Camera Torch OFF',
+                                ),
+                                duration: const Duration(milliseconds: 700),
                               ),
-                              duration: const Duration(milliseconds: 700),
-                            ),
-                          );
+                            );
+                          }
                         },
                       ),
                     ],
@@ -552,154 +601,218 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               ),
             ),
 
-            // Camera Viewfinder Simulation
+            // Live Camera Viewfinder + Scanning Laser Bar Overlay
             Expanded(
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Dim background
-                  Container(color: Colors.black87),
+                  // 1. Live Camera Preview from MobileScanner
+                  Positioned.fill(
+                    child: MobileScanner(
+                      controller: _scannerController,
+                      fit: BoxFit.cover,
+                      onDetect: (capture) {
+                        for (final barcode in capture.barcodes) {
+                          final val = barcode.rawValue;
+                          if (val != null && val.trim().isNotEmpty) {
+                            _handleLiveScanDetected(val.trim());
+                            break;
+                          }
+                        }
+                      },
+                      errorBuilder: (context, error) {
+                        return Container(
+                          color: Colors.black,
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.camera_alt_outlined,
+                                color: Colors.white38,
+                                size: 48,
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Camera Ready (Point at Barcode or Tap to Scan)',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
 
-                  // Viewfinder Frame
-                  Container(
-                    width: 260,
-                    height: 260,
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppColors.tropicalYellow,
-                        width: 2,
+                  // 2. Translucent dark overlay outside the viewfinder frame
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.35),
                       ),
                     ),
-                    child: Stack(
-                      children: [
-                        // Animated Scanning Line
-                        AnimatedBuilder(
-                          animation: _animController,
-                          builder: (context, child) {
-                            return Positioned(
-                              top: _animController.value * 230 + 10,
-                              left: 10,
-                              right: 10,
-                              child: Container(
-                                height: 3,
-                                decoration: BoxDecoration(
-                                  color: AppColors.limeGreen,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.limeGreen.withValues(
-                                        alpha: 0.8,
+                  ),
+
+                  // 3. Viewfinder Frame with interactive Tap-to-Scan & animated laser bar
+                  GestureDetector(
+                    onTap: () => _onSimulateScan(context),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: 270,
+                      height: 270,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppColors.tropicalYellow,
+                          width: 2.5,
+                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          // Animated Scanning Laser Line
+                          AnimatedBuilder(
+                            animation: _animController,
+                            builder: (context, child) {
+                              return Positioned(
+                                top: _animController.value * 240 + 10,
+                                left: 10,
+                                right: 10,
+                                child: Container(
+                                  height: 3.5,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.limeGreen,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.limeGreen.withValues(
+                                          alpha: 0.85,
+                                        ),
+                                        blurRadius: 10,
+                                        spreadRadius: 3,
                                       ),
-                                      blurRadius: 8,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                        // Corner brackets
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: const BoxDecoration(
-                              border: Border(
-                                top: BorderSide(
-                                  color: AppColors.tropicalYellow,
-                                  width: 4,
-                                ),
-                                left: BorderSide(
-                                  color: AppColors.tropicalYellow,
-                                  width: 4,
+                              );
+                            },
+                          ),
+                          // Corner brackets
+                          Align(
+                            alignment: Alignment.topLeft,
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(
+                                    color: AppColors.tropicalYellow,
+                                    width: 4.5,
+                                  ),
+                                  left: BorderSide(
+                                    color: AppColors.tropicalYellow,
+                                    width: 4.5,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        Align(
-                          alignment: Alignment.topRight,
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: const BoxDecoration(
-                              border: Border(
-                                top: BorderSide(
-                                  color: AppColors.tropicalYellow,
-                                  width: 4,
-                                ),
-                                right: BorderSide(
-                                  color: AppColors.tropicalYellow,
-                                  width: 4,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Align(
-                          alignment: Alignment.bottomLeft,
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: const BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: AppColors.tropicalYellow,
-                                  width: 4,
-                                ),
-                                left: BorderSide(
-                                  color: AppColors.tropicalYellow,
-                                  width: 4,
+                          Align(
+                            alignment: Alignment.topRight,
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(
+                                    color: AppColors.tropicalYellow,
+                                    width: 4.5,
+                                  ),
+                                  right: BorderSide(
+                                    color: AppColors.tropicalYellow,
+                                    width: 4.5,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        Align(
-                          alignment: Alignment.bottomRight,
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: const BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: AppColors.tropicalYellow,
-                                  width: 4,
-                                ),
-                                right: BorderSide(
-                                  color: AppColors.tropicalYellow,
-                                  width: 4,
+                          Align(
+                            alignment: Alignment.bottomLeft,
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: AppColors.tropicalYellow,
+                                    width: 4.5,
+                                  ),
+                                  left: BorderSide(
+                                    color: AppColors.tropicalYellow,
+                                    width: 4.5,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                          Align(
+                            alignment: Alignment.bottomRight,
+                            child: Container(
+                              width: 26,
+                              height: 26,
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: AppColors.tropicalYellow,
+                                    width: 4.5,
+                                  ),
+                                  right: BorderSide(
+                                    color: AppColors.tropicalYellow,
+                                    width: 4.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
 
                   // Prompt Text
                   Positioned(
-                    bottom: 30,
+                    bottom: 24,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
+                        color: Colors.black.withValues(alpha: 0.75),
                         borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white24, width: 0.5),
                       ),
-                      child: const Text(
-                        'Align Kitchen Bag Barcode or Customer Pass in frame',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.center_focus_strong,
+                            color: AppColors.limeGreen,
+                            size: 16,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Point camera at Barcode / QR (or tap frame)',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
