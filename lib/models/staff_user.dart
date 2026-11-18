@@ -1,9 +1,12 @@
 enum StaffRole {
-  deliveryDriver(
-    'Delivery Courier',
-    'Couriers delivering orders to customer homes',
-  ),
-  cashier('Counter Cashier', 'Staff at store counter validating pickup orders');
+  deliveryStaff(
+    'Delivery Staff',
+    'Staff delivering orders and handling pickups',
+  );
+
+  // Aliases for seamless compatibility
+  static const StaffRole deliveryDriver = StaffRole.deliveryStaff;
+  static const StaffRole cashier = StaffRole.deliveryStaff;
 
   final String title;
   final String description;

@@ -206,11 +206,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   'Tropical Gyros',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                 ),
-                Text(
-                  user?.role == StaffRole.cashier
-                      ? 'Counter Cashier Terminal'
-                      : 'Delivery Courier Terminal',
-                  style: const TextStyle(
+                const Text(
+                  'Delivery Staff Terminal • Flagship Nassau',
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: AppColors.textSecondary,

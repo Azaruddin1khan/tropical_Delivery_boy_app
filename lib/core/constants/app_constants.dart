@@ -1,6 +1,6 @@
 class AppConstants {
   static const String appName = 'Tropical Gyros Staff';
-  static const String appSubtitle = 'Delivery & Cashier Portal';
+  static const String appSubtitle = 'Delivery Staff Portal';
   static const String currency = 'BSD ';
 
   // Centralized Official Restaurant Configuration

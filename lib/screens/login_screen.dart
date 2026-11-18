@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController(text: 'StaffPass2026!');
   bool _obscurePassword = true;
   bool _isLoading = false;
-  StaffRole _selectedRole = StaffRole.deliveryDriver;
+  StaffRole _selectedRole = StaffRole.deliveryStaff;
 
   @override
   void dispose() {
@@ -58,21 +58,16 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _autofillDriver() {
+  void _autofillStaff() {
     setState(() {
-      _selectedRole = StaffRole.deliveryDriver;
+      _selectedRole = StaffRole.deliveryStaff;
       _usernameController.text = 'driver.devon@tropicalgyros.com';
       _passwordController.text = 'StaffPass2026!';
     });
   }
 
-  void _autofillCashier() {
-    setState(() {
-      _selectedRole = StaffRole.cashier;
-      _usernameController.text = 'cashier.maya@tropicalgyros.com';
-      _passwordController.text = 'StaffPass2026!';
-    });
-  }
+  // Compatibility helper
+  void _autofillDriver() => _autofillStaff();
 
   @override
   Widget build(BuildContext context) {
@@ -129,122 +124,59 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
-                  // Role Selector Segment
+                  // Single Role Indicator Badge: Delivery Staff
                   Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
+                      color: AppColors.tropicalYellowLight,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(
+                        color: AppColors.tropicalYellowDark.withValues(
+                          alpha: 0.35,
+                        ),
+                      ),
                     ),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(
-                              () => _selectedRole = StaffRole.deliveryDriver,
-                            ),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: _selectedRole == StaffRole.deliveryDriver
-                                    ? Colors.white
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow:
-                                    _selectedRole == StaffRole.deliveryDriver
-                                    ? [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.06,
-                                          ),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.delivery_dining_rounded,
-                                    size: 18,
-                                    color:
-                                        _selectedRole ==
-                                            StaffRole.deliveryDriver
-                                        ? AppColors.tropicalYellowDark
-                                        : AppColors.textMuted,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Delivery Staff',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color:
-                                          _selectedRole ==
-                                              StaffRole.deliveryDriver
-                                          ? AppColors.textDark
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.delivery_dining_rounded,
+                            size: 22,
+                            color: AppColors.tropicalYellowDark,
                           ),
                         ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(
-                              () => _selectedRole = StaffRole.cashier,
-                            ),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: _selectedRole == StaffRole.cashier
-                                    ? Colors.white
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: _selectedRole == StaffRole.cashier
-                                    ? [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.06,
-                                          ),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.storefront_rounded,
-                                    size: 18,
-                                    color: _selectedRole == StaffRole.cashier
-                                        ? AppColors.oceanBlue
-                                        : AppColors.textMuted,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Counter Cashier',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: _selectedRole == StaffRole.cashier
-                                          ? AppColors.textDark
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
+                        const SizedBox(width: 12),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Delivery Staff Account',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textDark,
                               ),
                             ),
-                          ),
+                            Text(
+                              'Order dispatch, bag scan & doorstep delivery',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -265,15 +197,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _usernameController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
-                      hintText: 'e.g. driver@tropicalgyros.com',
-                      prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+                      hintText: 'Enter staff email (e.g. driver@domain.com)',
+                      prefixIcon: Icon(Icons.person_outline_rounded),
                     ),
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
-                        return 'Staff username/email is required';
-                      }
-                      if (!val.contains('@') && val.trim().length < 3) {
-                        return 'Enter a valid staff identifier';
+                        return 'Please enter your username or email';
                       }
                       return null;
                     },
@@ -295,29 +224,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       hintText: 'Enter your password',
-                      prefixIcon: const Icon(
-                        Icons.lock_outline_rounded,
-                        size: 20,
-                      ),
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
-                          size: 20,
-                          color: AppColors.textMuted,
                         ),
-                        onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
-                        ),
+                        onPressed: () {
+                          setState(() => _obscurePassword = !_obscurePassword);
+                        },
                       ),
                     ),
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
-                        return 'Password is required';
-                      }
-                      if (val.trim().length < 4) {
-                        return 'Password must be at least 4 characters';
+                        return 'Please enter your password';
                       }
                       return null;
                     },
@@ -329,13 +250,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     text: 'Sign In (Demo)',
                     icon: Icons.login_rounded,
                     isLoading: _isLoading,
+                    variant: ButtonVariant.primary,
+                    width: double.infinity,
                     onPressed: _handleLogin,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                  // Demo Shortcuts
-                  const Divider(color: AppColors.border),
-                  const SizedBox(height: 8),
+                  // Quick Demo Autofill section
                   const Text(
                     'Quick Demo Autofill:',
                     textAlign: TextAlign.center,
@@ -346,48 +267,31 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _autofillDriver,
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppColors.border),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: const Text(
-                            'Driver Preset',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textDark,
-                            ),
-                          ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(
+                        Icons.flash_on_rounded,
+                        size: 16,
+                        color: AppColors.tropicalYellowDark,
+                      ),
+                      onPressed: _autofillStaff,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.border),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _autofillCashier,
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppColors.border),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: const Text(
-                            'Cashier Preset',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textDark,
-                            ),
-                          ),
+                      label: const Text(
+                        'Autofill Delivery Staff (Demo)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),

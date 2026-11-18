@@ -210,7 +210,7 @@ class StaffAppState extends ChangeNotifier {
   bool login({
     required String username,
     required String password,
-    required StaffRole role,
+    StaffRole role = StaffRole.deliveryStaff,
   }) {
     if (username.trim().isEmpty || password.trim().isEmpty) {
       return false;
@@ -218,12 +218,10 @@ class StaffAppState extends ChangeNotifier {
 
     _currentUser = StaffUser(
       id: 'staff_${DateTime.now().millisecondsSinceEpoch}',
-      name: role == StaffRole.deliveryDriver
-          ? 'Driver Devon Miller'
-          : 'Cashier Maya Lin',
+      name: 'Devon Miller',
       email: username.trim(),
-      role: role,
-      phone: '+1 (305) 555-0100',
+      role: StaffRole.deliveryStaff,
+      phone: '+1 (242) 555-0100',
       isOnline: true,
     );
 
