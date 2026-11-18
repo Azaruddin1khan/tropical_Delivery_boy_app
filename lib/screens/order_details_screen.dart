@@ -9,6 +9,7 @@ import '../core/widgets/status_chip.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_state_scope.dart';
 import '../widgets/swipe_to_deliver_button.dart';
+import 'barcode_scanner_screen.dart';
 import 'delivery_route_map_screen.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
@@ -186,6 +187,90 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               },
               child: const Text('Back to Assigned Orders'),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDoorstepVerificationPrompt(DeliveryOrder order) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.pin_drop_rounded, color: AppColors.oceanBlue),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Doorstep Geofence',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'To deliver Order #${order.id}, you must be near the customer drop location:\n\n📍 ${order.deliveryAddress}',
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 18,
+                    color: Color(0xFFD97706),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Please open the Live Navigation Map to verify your doorstep proximity (<= 200m) and swipe Delivered.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF92400E),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.oceanBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            icon: const Icon(Icons.navigation_rounded, size: 16),
+            label: const Text('🛰️ Open Navigation Map'),
+            onPressed: () {
+              Navigator.of(dialogCtx).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => DeliveryRouteMapScreen(order: order),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -686,7 +771,32 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 ),
                 child: Column(
                   children: [
-                    if (order.status == DeliveryOrderStatus.assigned)
+                    if (order.status == DeliveryOrderStatus.assigned &&
+                        order.orderType == 'delivery') ...[
+                      PrimaryButton(
+                        text: 'Scan Kitchen Bag to Pickup',
+                        icon: Icons.qr_code_scanner_rounded,
+                        variant: ButtonVariant.primary,
+                        width: double.infinity,
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => BarcodeScannerScreen(
+                                targetOrderCode: order.barcodeCode,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      PrimaryButton(
+                        text: 'Start Delivery / En Route (Skip Scan)',
+                        icon: Icons.directions_bike_rounded,
+                        variant: ButtonVariant.secondary,
+                        width: double.infinity,
+                        onPressed: () => _handleMarkOutForDelivery(order),
+                      ),
+                    ] else if (order.status == DeliveryOrderStatus.assigned)
                       PrimaryButton(
                         text: 'Start Delivery / En Route',
                         icon: Icons.directions_bike_rounded,
@@ -707,6 +817,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                       SwipeToDeliverButton(
                         label: 'Delivered',
                         height: 52,
+                        enabled: false,
+                        disabledLabel: '🛰️ Open Map to Deliver at Doorstep',
+                        onDisabledTap: () =>
+                            _showDoorstepVerificationPrompt(order),
                         onDelivered: () => _handleConfirmDelivered(order),
                       ),
                   ],

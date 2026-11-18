@@ -6,10 +6,16 @@ import '../core/widgets/demo_banner.dart';
 import '../core/widgets/primary_button.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_state_scope.dart';
+import 'delivery_route_map_screen.dart';
 import 'order_details_screen.dart';
 
 class BarcodeScannerScreen extends StatefulWidget {
-  const BarcodeScannerScreen({super.key});
+  final String? targetOrderCode;
+
+  const BarcodeScannerScreen({
+    super.key,
+    this.targetOrderCode,
+  });
 
   @override
   State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
@@ -28,6 +34,15 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    if (widget.targetOrderCode != null) {
+      _manualInputController.text = widget.targetOrderCode!;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _onSimulateScan(context, sampleCode: widget.targetOrderCode);
+        }
+      });
+    }
   }
 
   @override
@@ -39,11 +54,39 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
   void _onSimulateScan(
     BuildContext context, {
-    String sampleCode = 'TG-BC-8098',
+    String? sampleCode,
   }) {
     final state = StaffStateScope.read(context);
-    final order =
-        state.findOrderByCode(sampleCode) ?? state.assignedOrders.firstOrNull;
+    DeliveryOrder? order;
+    if (sampleCode != null && sampleCode.isNotEmpty) {
+      order = state.findOrderByCode(sampleCode);
+    }
+
+    if (order == null) {
+      // First prioritize assigned delivery orders (kitchen bag pickup)
+      final assignedDelivery = state.assignedOrders
+          .where(
+            (o) =>
+                o.status == DeliveryOrderStatus.assigned &&
+                o.orderType == 'delivery',
+          )
+          .firstOrNull;
+
+      // Second prioritize out for delivery orders (doorstep handover)
+      final enRouteDelivery = state.assignedOrders
+          .where((o) => o.status == DeliveryOrderStatus.outForDelivery)
+          .firstOrNull;
+
+      // Third prioritize takeout orders
+      final takeout = state.assignedOrders
+          .where((o) => o.orderType == 'pickup')
+          .firstOrNull;
+
+      order = assignedDelivery ??
+          enRouteDelivery ??
+          takeout ??
+          state.assignedOrders.firstOrNull;
+    }
 
     if (order == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -94,6 +137,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   void _showScanResultBottomSheet(BuildContext context, DeliveryOrder order) {
+    final isKitchenPickup = order.status == DeliveryOrderStatus.assigned &&
+        order.orderType == 'delivery';
+    final isDoorstepHandover =
+        order.status == DeliveryOrderStatus.outForDelivery;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -122,47 +170,71 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.limeGreenLight,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.qr_code_scanner_rounded,
-                          color: AppColors.limeGreenDark,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Scan Verified (Demo)',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.limeGreenDark,
-                            ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isKitchenPickup
+                                ? AppColors.limeGreenLight
+                                : isDoorstepHandover
+                                    ? AppColors.oceanBlueLight
+                                    : AppColors.tropicalYellowLight,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          Text(
-                            'Code: ${order.barcodeCode}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
+                          child: Icon(
+                            isKitchenPickup
+                                ? Icons.lunch_dining_rounded
+                                : isDoorstepHandover
+                                    ? Icons.verified_user_rounded
+                                    : Icons.storefront_rounded,
+                            color: isKitchenPickup
+                                ? AppColors.limeGreenDark
+                                : isDoorstepHandover
+                                    ? AppColors.oceanBlueDark
+                                    : AppColors.tropicalYellowDark,
+                            size: 24,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isKitchenPickup
+                                    ? 'Kitchen Bag Verified! ✓'
+                                    : isDoorstepHandover
+                                        ? 'Doorstep Handover Verified! ✓'
+                                        : 'Takeout Bag Verified! ✓',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: isKitchenPickup
+                                      ? AppColors.limeGreenDark
+                                      : isDoorstepHandover
+                                          ? AppColors.oceanBlueDark
+                                          : AppColors.tropicalYellowDark,
+                                ),
+                              ),
+                              Text(
+                                'Code: ${order.barcodeCode}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 10,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceVariant,
@@ -171,7 +243,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     child: Text(
                       order.id,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -179,6 +251,59 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 ],
               ),
               const Divider(height: 24),
+
+              // Stage Notice Banner
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isKitchenPickup
+                      ? AppColors.limeGreenLight
+                      : isDoorstepHandover
+                          ? AppColors.oceanBlueLight
+                          : AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isKitchenPickup
+                          ? Icons.inventory_2_outlined
+                          : isDoorstepHandover
+                              ? Icons.home_rounded
+                              : Icons.storefront_outlined,
+                      size: 16,
+                      color: isKitchenPickup
+                          ? AppColors.limeGreenDark
+                          : isDoorstepHandover
+                              ? AppColors.oceanBlueDark
+                              : AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        isKitchenPickup
+                            ? 'Ready at Tropical Gyros Flagship Kitchen. Confirm pickup to begin route.'
+                            : isDoorstepHandover
+                                ? 'At Customer Doorstep. Confirm delivery handover.'
+                                : 'Takeout counter ready for customer pickup.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isKitchenPickup
+                              ? AppColors.limeGreenDark
+                              : isDoorstepHandover
+                                  ? AppColors.oceanBlueDark
+                                  : AppColors.textDark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
               // Customer & Item info
               Text(
                 'Customer: ${order.customerName}',
@@ -187,14 +312,35 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
-                '${order.totalItemCount} items • ${order.items.map((i) => i.name).join(', ')}',
+                order.deliveryAddress,
                 style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textSecondary,
                 ),
               ),
+              const SizedBox(height: 8),
+              Text(
+                '${order.totalItemCount} items: ${order.items.map((i) => "${i.quantity}x ${i.name}").join(', ')}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textDark,
+                ),
+              ),
+              if (order.deliveryNotes != null &&
+                  order.deliveryNotes!.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Note: "${order.deliveryNotes}"',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
 
               // Payment Status summary
@@ -209,16 +355,18 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      order.requiresCashCollection
-                          ? 'Cash Due: ${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)}'
-                          : 'Payment Already Verified (${order.paymentMethod})',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: order.requiresCashCollection
-                            ? AppColors.warningOrange
-                            : AppColors.limeGreenDark,
+                    Expanded(
+                      child: Text(
+                        order.requiresCashCollection
+                            ? 'Cash Due: ${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)} (COD)'
+                            : 'Payment Verified (${order.paymentMethod})',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: order.requiresCashCollection
+                              ? AppColors.warningOrange
+                              : AppColors.limeGreenDark,
+                        ),
                       ),
                     ),
                     Text(
@@ -260,7 +408,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.limeGreen,
+                        backgroundColor: isKitchenPickup
+                            ? AppColors.limeGreen
+                            : isDoorstepHandover
+                                ? AppColors.oceanBlue
+                                : AppColors.tropicalYellowDark,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -270,25 +422,61 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       onPressed: () {
                         Navigator.of(bottomSheetContext).pop();
                         final state = StaffStateScope.read(context);
-                        if (order.orderType == 'pickup') {
+
+                        if (isKitchenPickup) {
+                          state.updateOrderStatus(
+                            order.id,
+                            DeliveryOrderStatus.outForDelivery,
+                          );
+                          final updatedOrder = state.findOrderByCode(order.id) ??
+                              order.copyWith(
+                                status: DeliveryOrderStatus.outForDelivery,
+                              );
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Order #${order.id} picked up from Flagship Kitchen! Starting navigation 🛵',
+                              ),
+                              backgroundColor: AppColors.limeGreenDark,
+                            ),
+                          );
+
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => DeliveryRouteMapScreen(
+                                order: updatedOrder,
+                              ),
+                            ),
+                          );
+                        } else if (order.orderType == 'pickup') {
                           state.markOrderPickedUp(order.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Order #${order.id} verified and picked up! 🥡',
+                              ),
+                              backgroundColor: AppColors.oceanBlueDark,
+                            ),
+                          );
                         } else {
                           state.markOrderDelivered(order.id);
-                        }
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Order ${order.id} verified and completed! (Local demo state)',
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Order #${order.id} delivered to ${order.customerName}! 🎉',
+                              ),
+                              backgroundColor: AppColors.limeGreenDark,
                             ),
-                            backgroundColor: AppColors.limeGreenDark,
-                          ),
-                        );
+                          );
+                        }
                       },
                       child: Text(
-                        order.orderType == 'pickup'
-                            ? 'Complete Pickup'
-                            : 'Confirm Delivered',
+                        isKitchenPickup
+                            ? '🛵 Confirm Pickup'
+                            : (order.orderType == 'pickup'
+                                ? 'Complete Pickup'
+                                : 'Confirm Delivered'),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -304,6 +492,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
   @override
   Widget build(BuildContext context) {
+    final state = StaffStateScope.of(context);
+    final activeOrders = state.assignedOrders;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -503,7 +694,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Text(
-                        'Align customer QR code or Barcode inside the frame',
+                        'Align Kitchen Bag Barcode or Customer Pass in frame',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -519,10 +710,95 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             // Bottom Controls & Manual Entry
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (activeOrders.isNotEmpty) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Quick Scan Selectors (Demo):',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        Text(
+                          '${activeOrders.length} active',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          for (final ord in activeOrders)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ActionChip(
+                                avatar: Icon(
+                                  ord.status == DeliveryOrderStatus.assigned &&
+                                          ord.orderType == 'delivery'
+                                      ? Icons.lunch_dining_rounded
+                                      : ord.status ==
+                                              DeliveryOrderStatus.outForDelivery
+                                          ? Icons.home_rounded
+                                          : Icons.storefront_rounded,
+                                  size: 15,
+                                  color: ord.status ==
+                                              DeliveryOrderStatus.assigned &&
+                                          ord.orderType == 'delivery'
+                                      ? AppColors.limeGreenDark
+                                      : ord.status ==
+                                              DeliveryOrderStatus.outForDelivery
+                                          ? AppColors.oceanBlueDark
+                                          : AppColors.tropicalYellowDark,
+                                ),
+                                label: Text(
+                                  ord.status == DeliveryOrderStatus.assigned &&
+                                          ord.orderType == 'delivery'
+                                      ? 'Bag #${ord.id}'
+                                      : ord.status ==
+                                              DeliveryOrderStatus.outForDelivery
+                                          ? 'Doorstep #${ord.id}'
+                                          : 'Takeout #${ord.id}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                backgroundColor: ord.status ==
+                                            DeliveryOrderStatus.assigned &&
+                                        ord.orderType == 'delivery'
+                                    ? AppColors.limeGreenLight
+                                    : ord.status ==
+                                            DeliveryOrderStatus.outForDelivery
+                                        ? AppColors.oceanBlueLight
+                                        : AppColors.tropicalYellowLight,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                onPressed: () => _onSimulateScan(
+                                  context,
+                                  sampleCode: ord.barcodeCode,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+
                   PrimaryButton(
                     text: 'Simulate Scan Customer Barcode (Demo)',
                     icon: Icons.qr_code_2_rounded,
@@ -530,7 +806,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     width: double.infinity,
                     onPressed: () => _onSimulateScan(context),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
                   // Manual ID Entry
                   Row(
@@ -540,7 +816,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                           controller: _manualInputController,
                           textCapitalization: TextCapitalization.characters,
                           decoration: const InputDecoration(
-                            hintText: 'Or enter Order ID (e.g. TG-8098)',
+                            hintText: 'Or enter Order ID (e.g. TG-8095)',
                             isDense: true,
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 14,

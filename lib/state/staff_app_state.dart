@@ -103,7 +103,8 @@ class StaffAppState extends ChangeNotifier {
         id: 'TG-8098',
         customerName: 'Derrick Vance',
         customerPhone: '+1 (305) 555-0177',
-        deliveryAddress: 'Pickup Counter • 740 Ocean Dr (Tropical Gyros)',
+        deliveryAddress:
+            'Pickup Counter • Rosetta St & Mackey St (Tropical Gyros Flagship)',
         orderTime: now.subtract(const Duration(minutes: 10)),
         items: const [
           OrderItem(
@@ -180,7 +181,8 @@ class StaffAppState extends ChangeNotifier {
         id: 'TG-8069',
         customerName: 'Jordan Smith',
         customerPhone: '+1 (305) 555-0164',
-        deliveryAddress: 'Pickup Counter • 740 Ocean Dr',
+        deliveryAddress:
+            'Pickup Counter • Rosetta St & Mackey St (Tropical Gyros Flagship)',
         orderTime: now.subtract(const Duration(hours: 4)),
         deliveredAt: now.subtract(const Duration(hours: 3, minutes: 30)),
         items: const [
@@ -288,20 +290,32 @@ class StaffAppState extends ChangeNotifier {
 
     // First search active assigned orders
     for (final o in _assignedOrders) {
-      if (o.id.toUpperCase() == clean ||
-          o.barcodeCode.toUpperCase() == clean ||
-          o.qrCode.toUpperCase() == clean ||
-          clean.contains(o.id.toUpperCase())) {
+      final oId = o.id.toUpperCase();
+      final oBc = o.barcodeCode.toUpperCase();
+      final oQr = o.qrCode.toUpperCase();
+      if (oId == clean ||
+          oBc == clean ||
+          oQr == clean ||
+          clean.contains(oId) ||
+          oId.contains(clean) ||
+          clean.contains(oBc) ||
+          oBc.contains(clean)) {
         return o;
       }
     }
 
     // Then search history
     for (final o in _deliveryHistory) {
-      if (o.id.toUpperCase() == clean ||
-          o.barcodeCode.toUpperCase() == clean ||
-          o.qrCode.toUpperCase() == clean ||
-          clean.contains(o.id.toUpperCase())) {
+      final oId = o.id.toUpperCase();
+      final oBc = o.barcodeCode.toUpperCase();
+      final oQr = o.qrCode.toUpperCase();
+      if (oId == clean ||
+          oBc == clean ||
+          oQr == clean ||
+          clean.contains(oId) ||
+          oId.contains(clean) ||
+          clean.contains(oBc) ||
+          oBc.contains(clean)) {
         return o;
       }
     }

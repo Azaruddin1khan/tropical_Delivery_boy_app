@@ -85,12 +85,15 @@ class PrimaryButton extends StatelessWidget {
                     Icon(icon, size: 18),
                     const SizedBox(width: 8),
                   ],
-                  Text(
-                    text,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: fg,
+                  Flexible(
+                    child: Text(
+                      text,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: fg,
+                      ),
                     ),
                   ),
                 ],

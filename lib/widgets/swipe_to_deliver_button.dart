@@ -4,11 +4,12 @@ import 'package:flutter/services.dart';
 import '../core/theme/app_colors.dart';
 
 /// A modern interactive "Swipe to Deliver" slider button styled to match the Tropical Gyros theme:
-/// - Rounded pill container with brand lime green gradient
+/// - Rounded pill container with brand lime green gradient (or slate/locked gradient when disabled)
 /// - Centered bold "Delivered" label that gently fades on swipe
-/// - Circular white draggable handle with '>' chevron in theme color
+/// - Circular white draggable handle with '>' chevron in theme color (or lock icon when disabled)
 /// - Spring-back physics if released early (<75%)
 /// - Heavy haptic vibration & instant delivery confirmation on full swipe
+/// - Strict Doorstep Geofence Support: When `enabled: false`, locks sliding and prompts the courier
 class SwipeToDeliverButton extends StatefulWidget {
   final VoidCallback onDelivered;
   final String label;
@@ -16,6 +17,9 @@ class SwipeToDeliverButton extends StatefulWidget {
   final List<Color>? gradientColors;
   final Color thumbColor;
   final Color? iconColor;
+  final bool enabled;
+  final String? disabledLabel;
+  final VoidCallback? onDisabledTap;
 
   const SwipeToDeliverButton({
     super.key,
@@ -25,6 +29,9 @@ class SwipeToDeliverButton extends StatefulWidget {
     this.gradientColors,
     this.thumbColor = Colors.white,
     this.iconColor,
+    this.enabled = true,
+    this.disabledLabel,
+    this.onDisabledTap,
   });
 
   @override
@@ -45,13 +52,14 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
-    _resetAnimation = Tween<double>(begin: 0, end: 0).animate(
-      CurvedAnimation(parent: _resetController, curve: Curves.easeOutCubic),
-    )..addListener(() {
-        setState(() {
-          _dragPosition = _resetAnimation.value;
+    _resetAnimation =
+        Tween<double>(begin: 0, end: 0).animate(
+          CurvedAnimation(parent: _resetController, curve: Curves.easeOutCubic),
+        )..addListener(() {
+          setState(() {
+            _dragPosition = _resetAnimation.value;
+          });
         });
-      });
   }
 
   @override
@@ -62,6 +70,9 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
 
   void _onDragUpdate(DragUpdateDetails details, double maxDrag) {
     if (_isCompleted) return;
+    if (!widget.enabled) {
+      return;
+    }
     setState(() {
       _dragPosition = (_dragPosition + details.delta.dx).clamp(0.0, maxDrag);
     });
@@ -69,6 +80,10 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
 
   void _onDragEnd(DragEndDetails details, double maxDrag) {
     if (_isCompleted) return;
+    if (!widget.enabled) {
+      widget.onDisabledTap?.call();
+      return;
+    }
     if (_dragPosition >= maxDrag * 0.75) {
       // Confirmed delivery!
       setState(() {
@@ -83,10 +98,7 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
       });
     } else {
       // Spring back to start
-      _resetAnimation = Tween<double>(
-        begin: _dragPosition,
-        end: 0.0,
-      ).animate(
+      _resetAnimation = Tween<double>(begin: _dragPosition, end: 0.0).animate(
         CurvedAnimation(parent: _resetController, curve: Curves.easeOutCubic),
       );
       _resetController.forward(from: 0.0);
@@ -95,25 +107,39 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
 
   @override
   Widget build(BuildContext context) {
-    // Theme-matched gradient (Vibrant Emerald / Lime Green)
-    final colors = widget.gradientColors ??
-        const [
-          Color(0xFF22C55E),
-          AppColors.limeGreen,
-          AppColors.limeGreenDark,
-        ];
+    final bool isEnabled = widget.enabled;
 
-    final chevronColor = widget.iconColor ?? AppColors.limeGreenDark;
+    // Active Emerald / Lime Green gradient vs Locked Slate gradient
+    final colors = !isEnabled
+        ? const [Color(0xFF334155), Color(0xFF475569), Color(0xFF334155)]
+        : (widget.gradientColors ??
+              const [
+                Color(0xFF22C55E),
+                AppColors.limeGreen,
+                AppColors.limeGreenDark,
+              ]);
+
+    final chevronColor = !isEnabled
+        ? const Color(0xFF64748B)
+        : (widget.iconColor ?? AppColors.limeGreenDark);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final totalWidth = constraints.maxWidth;
         final thumbSize = widget.height - 8;
         final maxDrag = (totalWidth - thumbSize - 8).clamp(0.0, totalWidth);
-        final progress = maxDrag > 0 ? (_dragPosition / maxDrag).clamp(0.0, 1.0) : 0.0;
+        final progress = maxDrag > 0
+            ? (_dragPosition / maxDrag).clamp(0.0, 1.0)
+            : 0.0;
 
         return GestureDetector(
-          // Allow swiping across the whole pill track as well
+          onTap: () {
+            if (!isEnabled) {
+              HapticFeedback.selectionClick();
+              widget.onDisabledTap?.call();
+            }
+          },
+          // Allow swiping across the whole pill track
           onHorizontalDragUpdate: (details) => _onDragUpdate(details, maxDrag),
           onHorizontalDragEnd: (details) => _onDragEnd(details, maxDrag),
           child: Container(
@@ -126,9 +152,14 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
                 end: Alignment.centerRight,
               ),
               borderRadius: BorderRadius.circular(widget.height / 2),
+              border: !isEnabled
+                  ? Border.all(color: const Color(0xFF64748B), width: 1.2)
+                  : null,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.limeGreen.withValues(alpha: 0.38),
+                  color: isEnabled
+                      ? AppColors.limeGreen.withValues(alpha: 0.38)
+                      : Colors.black.withValues(alpha: 0.15),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -141,14 +172,38 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
                 Center(
                   child: Opacity(
                     opacity: (1.0 - (progress * 1.3)).clamp(0.0, 1.0),
-                    child: Text(
-                      widget.label,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.5,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!isEnabled) ...[
+                          const Icon(
+                            Icons.lock_rounded,
+                            size: 16,
+                            color: Color(0xFFCBD5E1),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Flexible(
+                          child: Text(
+                            isEnabled
+                                ? widget.label
+                                : (widget.disabledLabel ??
+                                      'Reach drop location to deliver'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isEnabled
+                                  ? Colors.white
+                                  : const Color(0xFFE2E8F0),
+                              fontSize: isEnabled ? 16.5 : 14.0,
+                              fontWeight: isEnabled
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -173,9 +228,13 @@ class _SwipeToDeliverButtonState extends State<SwipeToDeliverButton>
                     ),
                     child: Center(
                       child: Icon(
-                        _isCompleted ? Icons.check_rounded : Icons.chevron_right_rounded,
+                        _isCompleted
+                            ? Icons.check_rounded
+                            : (!isEnabled
+                                  ? Icons.lock_outline_rounded
+                                  : Icons.chevron_right_rounded),
                         color: chevronColor,
-                        size: 28,
+                        size: isEnabled ? 28 : 22,
                       ),
                     ),
                   ),

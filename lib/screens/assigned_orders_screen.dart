@@ -8,6 +8,8 @@ import '../core/widgets/empty_state.dart';
 import '../core/widgets/status_chip.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_state_scope.dart';
+import 'barcode_scanner_screen.dart';
+import 'delivery_route_map_screen.dart';
 import 'order_details_screen.dart';
 
 class AssignedOrdersScreen extends StatefulWidget {
@@ -352,6 +354,82 @@ class _AssignedOrdersScreenState extends State<AssignedOrdersScreen> {
                 ),
               ],
             ),
+
+            // Context-Aware Quick Action Button
+            const SizedBox(height: 12),
+            if (order.status == DeliveryOrderStatus.assigned &&
+                order.orderType == 'delivery')
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                  label: const Text('Scan Kitchen Bag to Pickup'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.limeGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BarcodeScannerScreen(
+                          targetOrderCode: order.barcodeCode,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              )
+            else if (order.status == DeliveryOrderStatus.outForDelivery)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.navigation_rounded, size: 18),
+                  label: const Text('Start Live Navigation 🛵'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.oceanBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => DeliveryRouteMapScreen(order: order),
+                      ),
+                    );
+                  },
+                ),
+              )
+            else if (order.orderType == 'pickup')
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.storefront_rounded, size: 18),
+                  label: const Text('Verify Counter Pickup'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.oceanBlueDark,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BarcodeScannerScreen(
+                          targetOrderCode: order.barcodeCode,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
           ],
         ),
       ),
