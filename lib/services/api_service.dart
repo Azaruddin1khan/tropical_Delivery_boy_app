@@ -9,9 +9,10 @@ import '../models/staff_user.dart';
 class DeliveryApiService {
   static const List<String> _candidateBaseUrls = [
     'http://localhost:5001',
+    'http://192.168.1.4:5001',
     'http://10.0.2.2:5001',
     'http://127.0.0.1:5001',
-    'https://jennifer-manchester-robust-pleasant.trycloudflare.com',
+    'https://tropical-admin-six.vercel.app',
   ];
 
   static String? _resolvedBaseUrl;

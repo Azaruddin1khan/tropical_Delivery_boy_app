@@ -13,8 +13,8 @@ class AppConstants {
   static const String restaurantPhoneSecondary = '+1 (242) 603-5752';
 
   // Provisional & Verified Coordinates
-  static const double restaurantLatitude = 25.0675;
-  static const double restaurantLongitude = -77.3245;
+  static const double restaurantLatitude = 25.068135;
+  static const double restaurantLongitude = -77.327188;
 
   // Delivery Geofencing
   static const double deliveryRadiusMiles = 3.0;
@@ -24,9 +24,8 @@ class AppConstants {
   // Drop-off Proximity Restriction: Couriers must be within this distance (meters) of drop location to deliver
   static const double dropLocationProximityMeters = 200.0; // 200 meters doorstep geofence
 
-  // Backend API Base URL (Live Public Cloudflare Endpoint)
-  static const String backendBaseUrl =
-      'https://jennifer-manchester-robust-pleasant.trycloudflare.com';
+  // Backend API Base URL (Live Public Production Endpoint)
+  static const String backendBaseUrl = 'https://tropical-admin-six.vercel.app';
 
   // Demo Notice Strings
   static const String demoNotice =
