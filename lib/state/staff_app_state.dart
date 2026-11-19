@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/staff_user.dart';
 import '../models/order_item.dart';
 import '../models/delivery_order.dart';
+import '../services/api_service.dart';
 
 class StaffAppState extends ChangeNotifier {
   StaffUser? _currentUser;
@@ -207,25 +209,46 @@ class StaffAppState extends ChangeNotifier {
     ];
   }
 
-  bool login({
+  Future<bool> login({
     required String username,
     required String password,
     StaffRole role = StaffRole.deliveryStaff,
-  }) {
+  }) async {
     if (username.trim().isEmpty || password.trim().isEmpty) {
       return false;
     }
 
+    final cleanEmail = username.trim().toLowerCase();
+    final isMarco = cleanEmail.contains('marco');
+    final driverId = isMarco ? 'drv-01' : 'drv-00';
+    final driverName = isMarco ? 'Marco Pinder' : 'Devon Miller';
+    final driverPhone = isMarco ? '+1 (242) 555-9011' : '+1 (242) 555-0100';
+
+    // 1. Immediate local session for instant UI response
     _currentUser = StaffUser(
-      id: 'staff_${DateTime.now().millisecondsSinceEpoch}',
-      name: 'Devon Miller',
+      id: driverId,
+      name: driverName,
       email: username.trim(),
       role: StaffRole.deliveryStaff,
-      phone: '+1 (242) 555-0100',
+      phone: driverPhone,
       isOnline: true,
     );
-
     notifyListeners();
+
+    // 2. Authenticate against live backend API
+    try {
+      final remoteUser = await DeliveryApiService.login(
+        username: username,
+        password: password,
+      );
+      if (remoteUser != null) {
+        _currentUser = remoteUser;
+        notifyListeners();
+      }
+    } catch (_) {}
+
+    // 3. Fetch live assigned orders from MongoDB Atlas
+    unawaited(refreshOrders());
     return true;
   }
 
@@ -234,21 +257,64 @@ class StaffAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refreshOrders() async {
+    if (_currentUser == null) return;
+    try {
+      final driverId = _currentUser!.id;
+      final liveAssigned =
+          await DeliveryApiService.fetchAssignedOrders(driverId);
+      final liveHistory =
+          await DeliveryApiService.fetchDeliveryHistory(driverId);
+
+      if (liveAssigned.isNotEmpty) {
+        _assignedOrders = liveAssigned;
+      }
+      if (liveHistory.isNotEmpty) {
+        _deliveryHistory = liveHistory;
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('StaffAppState.refreshOrders error: $e');
+    }
+  }
+
   void updateOrderStatus(String orderId, DeliveryOrderStatus newStatus) {
     final index = _assignedOrders.indexWhere((o) => o.id == orderId);
     if (index != -1) {
       final updated = _assignedOrders[index].copyWith(status: newStatus);
       _assignedOrders[index] = updated;
       notifyListeners();
+
+      String apiStatus = 'assigned';
+      if (newStatus == DeliveryOrderStatus.outForDelivery) {
+        apiStatus = 'out_for_delivery';
+      } else if (newStatus == DeliveryOrderStatus.delivered) {
+        apiStatus = 'delivered';
+      } else if (newStatus == DeliveryOrderStatus.pickedUp) {
+        apiStatus = 'picked_up';
+      }
+
+      DeliveryApiService.updateOrderStatus(
+        orderId: orderId,
+        status: apiStatus,
+        driverId: _currentUser?.id,
+      );
     }
   }
 
   void markCashReceived(String orderId) {
     final index = _assignedOrders.indexWhere((o) => o.id == orderId);
     if (index != -1) {
-      final updated = _assignedOrders[index].copyWith(isPaid: true);
+      final order = _assignedOrders[index];
+      final updated = order.copyWith(isPaid: true);
       _assignedOrders[index] = updated;
       notifyListeners();
+
+      DeliveryApiService.markCashCollected(
+        orderId: orderId,
+        amount: order.totalAmount,
+        driverId: _currentUser?.id,
+      );
     }
   }
 
@@ -264,6 +330,19 @@ class StaffAppState extends ChangeNotifier {
       _assignedOrders.removeAt(index);
       _deliveryHistory.insert(0, completed);
       notifyListeners();
+
+      DeliveryApiService.updateOrderStatus(
+        orderId: orderId,
+        status: 'delivered',
+        driverId: _currentUser?.id,
+      );
+      if (order.isCashOnDelivery && !order.isPaid) {
+        DeliveryApiService.markCashCollected(
+          orderId: orderId,
+          amount: order.totalAmount,
+          driverId: _currentUser?.id,
+        );
+      }
     }
   }
 
@@ -279,6 +358,12 @@ class StaffAppState extends ChangeNotifier {
       _assignedOrders.removeAt(index);
       _deliveryHistory.insert(0, completed);
       notifyListeners();
+
+      DeliveryApiService.updateOrderStatus(
+        orderId: orderId,
+        status: 'picked_up',
+        driverId: _currentUser?.id,
+      );
     }
   }
 

@@ -47,4 +47,24 @@ class StaffUser {
       isOnline: isOnline ?? this.isOnline,
     );
   }
+
+  factory StaffUser.fromJson(Map<String, dynamic> json) {
+    return StaffUser(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? 'Staff Courier',
+      email: json['email'] as String? ?? '',
+      role: StaffRole.deliveryStaff,
+      phone: json['phone'] as String? ?? '+1 (242) 555-0100',
+      isOnline: json['isOnline'] as bool? ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'email': email,
+    'role': role.title,
+    'phone': phone,
+    'isOnline': isOnline,
+  };
 }

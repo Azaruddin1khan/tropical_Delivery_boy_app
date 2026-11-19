@@ -79,32 +79,41 @@ class _AssignedOrdersScreenState extends State<AssignedOrdersScreen> {
               ),
             ),
             Expanded(
-              child: filteredOrders.isEmpty
-                  ? EmptyState(
-                      icon: Icons.check_circle_outline_rounded,
-                      title: 'No Assigned Orders Found',
-                      message: _selectedFilter == 'all'
-                          ? 'You have completed all active assigned deliveries!\nReady for new dispatches.'
-                          : 'No orders match the selected filter criteria.',
-                      actionLabel: _selectedFilter != 'all'
-                          ? 'Show All Orders'
-                          : null,
-                      onAction: _selectedFilter != 'all'
-                          ? () => setState(() => _selectedFilter = 'all')
-                          : null,
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+              child: RefreshIndicator(
+                onRefresh: () => state.refreshOrders(),
+                color: AppColors.limeGreenDark,
+                child: filteredOrders.isEmpty
+                    ? ListView(
+                        children: [
+                          const SizedBox(height: 60),
+                          EmptyState(
+                            icon: Icons.check_circle_outline_rounded,
+                            title: 'No Assigned Orders Found',
+                            message: _selectedFilter == 'all'
+                                ? 'You have completed all active assigned deliveries!\nPull down to refresh or check ready dispatches.'
+                                : 'No orders match the selected filter criteria.',
+                            actionLabel: _selectedFilter != 'all'
+                                ? 'Show All Orders'
+                                : null,
+                            onAction: _selectedFilter != 'all'
+                                ? () => setState(() => _selectedFilter = 'all')
+                                : null,
+                          ),
+                        ],
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        itemCount: filteredOrders.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final order = filteredOrders[index];
+                          return _buildOrderCard(context, order);
+                        },
                       ),
-                      itemCount: filteredOrders.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final order = filteredOrders[index];
-                        return _buildOrderCard(context, order);
-                      },
-                    ),
+              ),
             ),
           ],
         ),
@@ -182,41 +191,44 @@ class _AssignedOrdersScreenState extends State<AssignedOrdersScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      order.id,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: order.orderType == 'pickup'
-                            ? AppColors.oceanBlueLight
-                            : AppColors.surfaceVariant,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        order.orderType.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: order.orderType == 'pickup'
-                              ? AppColors.oceanBlueDark
-                              : AppColors.textSecondary,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Text(
+                        order.id,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textDark,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: order.orderType == 'pickup'
+                              ? AppColors.oceanBlueLight
+                              : AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          order.orderType.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: order.orderType == 'pickup'
+                                ? AppColors.oceanBlueDark
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   timeStr,
                   style: const TextStyle(

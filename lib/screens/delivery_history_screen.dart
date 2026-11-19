@@ -165,37 +165,40 @@ class DeliveryHistoryScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      order.id,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceVariant,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        order.orderType.toUpperCase(),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Text(
+                        order.id,
                         style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textSecondary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textDark,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          order.orderType.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   'Delivered at $timeStr',
                   style: const TextStyle(
@@ -231,14 +234,20 @@ class DeliveryHistoryScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '${order.totalItemCount} items • ${order.paymentMethod}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textMuted,
+                Expanded(
+                  child: Text(
+                    '${order.totalItemCount} items • ${order.paymentMethod}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       '${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)}',

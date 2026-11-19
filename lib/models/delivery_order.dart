@@ -100,4 +100,72 @@ class DeliveryOrder {
       deliveredAt: deliveredAt ?? this.deliveredAt,
     );
   }
+
+  factory DeliveryOrder.fromJson(Map<String, dynamic> json) {
+    DeliveryOrderStatus parseStatus(String? s) {
+      switch (s?.toLowerCase()) {
+        case 'out_for_delivery':
+        case 'outfordelivery':
+          return DeliveryOrderStatus.outForDelivery;
+        case 'delivered':
+          return DeliveryOrderStatus.delivered;
+        case 'picked_up':
+        case 'pickedup':
+          return DeliveryOrderStatus.pickedUp;
+        default:
+          return DeliveryOrderStatus.assigned;
+      }
+    }
+
+    return DeliveryOrder(
+      id: json['id'] as String? ?? '',
+      customerName: json['customerName'] as String? ?? 'Customer',
+      customerPhone: json['customerPhone'] as String? ?? '',
+      deliveryAddress: json['deliveryAddress'] as String? ?? '',
+      items: (json['items'] as List<dynamic>?)
+              ?.map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      orderTime: json['orderTime'] != null
+          ? DateTime.tryParse(json['orderTime'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
+      deliveryFee: (json['deliveryFee'] as num?)?.toDouble() ?? 0.0,
+      tax: (json['tax'] as num?)?.toDouble() ?? 0.0,
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ??
+          (json['total'] as num?)?.toDouble() ??
+          0.0,
+      paymentMethod: json['paymentMethod'] as String? ?? 'Cash on Delivery',
+      isPaid: json['isPaid'] as bool? ?? false,
+      status: parseStatus(json['status'] as String?),
+      barcodeCode: json['barcodeCode'] as String? ?? json['barcodeId'] as String? ?? '',
+      qrCode: json['qrCode'] as String? ?? json['qrCodeValue'] as String? ?? '',
+      deliveryNotes: json['deliveryNotes'] as String?,
+      orderType: json['orderType'] as String? ?? json['deliveryType'] as String? ?? 'delivery',
+      deliveredAt: json['deliveredAt'] != null
+          ? DateTime.tryParse(json['deliveredAt'].toString())
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'customerName': customerName,
+    'customerPhone': customerPhone,
+    'deliveryAddress': deliveryAddress,
+    'items': items.map((i) => i.toJson()).toList(),
+    'orderTime': orderTime.toIso8601String(),
+    'subtotal': subtotal,
+    'deliveryFee': deliveryFee,
+    'tax': tax,
+    'totalAmount': totalAmount,
+    'paymentMethod': paymentMethod,
+    'isPaid': isPaid,
+    'status': status.name,
+    'barcodeCode': barcodeCode,
+    'qrCode': qrCode,
+    if (deliveryNotes != null) 'deliveryNotes': deliveryNotes,
+    'orderType': orderType,
+    if (deliveredAt != null) 'deliveredAt': deliveredAt!.toIso8601String(),
+  };
 }

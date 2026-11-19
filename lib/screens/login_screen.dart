@@ -43,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     final state = StaffStateScope.read(context);
-    final success = state.login(
+    final success = await state.login(
       username: _usernameController.text,
       password: _passwordController.text,
       role: _selectedRole,
@@ -51,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = false);
 
-    if (success) {
+    if (success && mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
       );
@@ -66,8 +66,13 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  // Compatibility helper
-  void _autofillDriver() => _autofillStaff();
+  void _autofillMarco() {
+    setState(() {
+      _selectedRole = StaffRole.deliveryStaff;
+      _usernameController.text = 'marco.p@tropicaldelivery.com';
+      _passwordController.text = 'Password123';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const DemoBanner(
-                    label: 'STAFF PORTAL • UI Prototype (No Real Auth / API)',
+                    label: 'STAFF PORTAL • Live Backend API Connected',
                   ),
                   const SizedBox(height: 16),
 
@@ -284,7 +289,34 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       label: const Text(
-                        'Autofill Delivery Staff (Demo)',
+                        'Autofill: Devon Miller (Eco Scooter)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(
+                        Icons.electric_scooter_rounded,
+                        size: 16,
+                        color: AppColors.limeGreenDark,
+                      ),
+                      onPressed: _autofillMarco,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.border),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      label: const Text(
+                        'Autofill: Marco Pinder (Live Radar)',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,

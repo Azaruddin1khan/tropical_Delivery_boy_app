@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
-import '../models/staff_user.dart';
 import '../state/staff_state_scope.dart';
 import 'assigned_orders_screen.dart';
 import 'barcode_scanner_screen.dart';
