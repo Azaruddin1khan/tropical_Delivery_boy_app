@@ -17,10 +17,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController(
-    text: 'driver.devon@tropicalgyros.com',
-  );
-  final _passwordController = TextEditingController(text: 'StaffPass2026!');
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
   StaffRole _selectedRole = StaffRole.deliveryStaff;
