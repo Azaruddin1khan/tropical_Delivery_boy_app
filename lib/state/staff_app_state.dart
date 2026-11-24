@@ -218,13 +218,27 @@ class StaffAppState extends ChangeNotifier {
       return false;
     }
 
+    // 1. Authenticate against live backend API first
+    try {
+      final remoteUser = await DeliveryApiService.login(
+        username: username,
+        password: password,
+      );
+      if (remoteUser != null) {
+        _currentUser = remoteUser;
+        notifyListeners();
+        unawaited(refreshOrders());
+        return true;
+      }
+    } catch (_) {}
+
+    // 2. Demo fallback if offline
     final cleanEmail = username.trim().toLowerCase();
     final isMarco = cleanEmail.contains('marco');
     final driverId = isMarco ? 'drv-01' : 'drv-00';
     final driverName = isMarco ? 'Marco Pinder' : 'Devon Miller';
     final driverPhone = isMarco ? '+1 (242) 555-9011' : '+1 (242) 555-0100';
 
-    // 1. Immediate local session for instant UI response
     _currentUser = StaffUser(
       id: driverId,
       name: driverName,
@@ -235,19 +249,6 @@ class StaffAppState extends ChangeNotifier {
     );
     notifyListeners();
 
-    // 2. Authenticate against live backend API
-    try {
-      final remoteUser = await DeliveryApiService.login(
-        username: username,
-        password: password,
-      );
-      if (remoteUser != null) {
-        _currentUser = remoteUser;
-        notifyListeners();
-      }
-    } catch (_) {}
-
-    // 3. Fetch live assigned orders from MongoDB Atlas
     unawaited(refreshOrders());
     return true;
   }

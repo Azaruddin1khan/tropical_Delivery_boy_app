@@ -7,41 +7,21 @@ import '../models/delivery_order.dart';
 import '../models/staff_user.dart';
 
 class DeliveryApiService {
+  static const String liveCloudBaseUrl = 'https://tropical-admin-six.vercel.app';
   static const List<String> _candidateBaseUrls = [
-    'http://localhost:5001',
-    'http://192.168.1.4:5001',
-    'http://10.0.2.2:5001',
-    'http://127.0.0.1:5001',
     'https://tropical-admin-six.vercel.app',
+    'http://localhost:3000',
+    'http://10.0.2.2:3000',
   ];
 
   static String? _resolvedBaseUrl;
 
   /// Immediate synchronous fallback URL for widgets
-  static String get fastBaseUrl => _resolvedBaseUrl ?? 'http://localhost:5001';
+  static String get fastBaseUrl => _resolvedBaseUrl ?? liveCloudBaseUrl;
 
   /// Resolves the fastest working backend URL
   static Future<String> getBaseUrl() async {
-    if (_resolvedBaseUrl != null) return _resolvedBaseUrl!;
-
-    for (final url in _candidateBaseUrls) {
-      try {
-        final uri = Uri.parse('$url/api/health');
-        final response = await http
-            .get(uri)
-            .timeout(const Duration(milliseconds: 1200));
-        if (response.statusCode == 200) {
-          _resolvedBaseUrl = url;
-          debugPrint('✅ DeliveryApiService connected to backend: $_resolvedBaseUrl');
-          return url;
-        }
-      } catch (_) {
-        // Try next candidate
-      }
-    }
-
-    _resolvedBaseUrl = 'http://localhost:5001';
-    return _resolvedBaseUrl!;
+    return liveCloudBaseUrl;
   }
 
   // =========================================================================
