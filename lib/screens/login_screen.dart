@@ -6,6 +6,7 @@ import '../core/widgets/demo_banner.dart';
 import '../core/widgets/primary_button.dart';
 import '../models/staff_user.dart';
 import '../state/staff_state_scope.dart';
+import 'forgot_password_screen.dart';
 import 'main_navigation_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -254,11 +255,38 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
+
+                  // Forgot Password Link
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordScreen(),
+                          ),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        foregroundColor: AppColors.tropicalYellowDark,
+                      ),
+                      child: const Text(
+                        'Forgot Password?',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
                   // Submit Button
                   PrimaryButton(
-                    text: 'Sign In (Demo)',
+                    text: 'Sign In',
                     icon: Icons.login_rounded,
                     isLoading: _isLoading,
                     variant: ButtonVariant.primary,

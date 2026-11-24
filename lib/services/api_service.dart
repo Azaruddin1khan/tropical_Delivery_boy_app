@@ -70,6 +70,64 @@ class DeliveryApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final base = await getBaseUrl();
+      final uri = Uri.parse('$base/api/delivery-boy/auth/forgot-password');
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email.trim()}),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      return json;
+    } catch (e) {
+      debugPrint('DeliveryApiService.forgotPassword error: $e');
+      return {
+        'success': false,
+        'error': 'Unable to connect to server. Please check your internet connection.',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+    String? token,
+  }) async {
+    try {
+      final base = await getBaseUrl();
+      final uri = Uri.parse('$base/api/delivery-boy/auth/reset-password');
+      final payload = <String, dynamic>{
+        'email': email.trim(),
+        'otp': otp.trim(),
+        'newPassword': newPassword.trim(),
+      };
+      if (token != null) payload['token'] = token;
+
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      return json;
+    } catch (e) {
+      debugPrint('DeliveryApiService.resetPassword error: $e');
+      return {
+        'success': false,
+        'error': 'Unable to connect to server. Please check your internet connection.',
+      };
+    }
+  }
+
   static Future<bool> updateStatus({
     required String driverId,
     required String status,

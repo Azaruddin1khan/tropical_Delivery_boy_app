@@ -247,6 +247,24 @@ class StaffAppState extends ChangeNotifier {
     return false;
   }
 
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    return await DeliveryApiService.forgotPassword(email);
+  }
+
+  Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+    String? token,
+  }) async {
+    return await DeliveryApiService.resetPassword(
+      email: email,
+      otp: otp,
+      newPassword: newPassword,
+      token: token,
+    );
+  }
+
   void logout() {
     _currentUser = null;
     notifyListeners();
