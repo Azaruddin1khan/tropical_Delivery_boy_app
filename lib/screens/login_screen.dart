@@ -55,6 +55,14 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
       );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(state.loginError ?? 'Incorrect email or password. Please try again.'),
+          backgroundColor: AppColors.errorRed,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -70,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _selectedRole = StaffRole.deliveryStaff;
       _usernameController.text = 'marco.p@tropicaldelivery.com';
-      _passwordController.text = 'Password123';
+      _passwordController.text = 'StaffPass2026!';
     });
   }
 

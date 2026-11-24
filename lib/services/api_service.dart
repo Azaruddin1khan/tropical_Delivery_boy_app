@@ -6,14 +6,20 @@ import 'package:http/http.dart' as http;
 import '../models/delivery_order.dart';
 import '../models/staff_user.dart';
 
+class DeliveryAuthResult {
+  final bool success;
+  final StaffUser? user;
+  final String? error;
+
+  const DeliveryAuthResult({
+    required this.success,
+    this.user,
+    this.error,
+  });
+}
+
 class DeliveryApiService {
   static const String liveCloudBaseUrl = 'https://tropical-admin-six.vercel.app';
-  static const List<String> _candidateBaseUrls = [
-    'https://tropical-admin-six.vercel.app',
-    'http://localhost:3000',
-    'http://10.0.2.2:3000',
-  ];
-
   static String? _resolvedBaseUrl;
 
   /// Immediate synchronous fallback URL for widgets
@@ -28,7 +34,7 @@ class DeliveryApiService {
   // 1. AUTHENTICATION & PROFILE
   // =========================================================================
 
-  static Future<StaffUser?> login({
+  static Future<DeliveryAuthResult> login({
     required String username,
     required String password,
   }) async {
@@ -39,20 +45,29 @@ class DeliveryApiService {
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': username.trim(), 'password': password}),
+            body: jsonEncode({'email': username.trim(), 'password': password.trim()}),
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 8));
 
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        if (json['success'] == true && json['driver'] != null) {
-          return StaffUser.fromJson(json['driver'] as Map<String, dynamic>);
-        }
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 && json['success'] == true && json['driver'] != null) {
+        return DeliveryAuthResult(
+          success: true,
+          user: StaffUser.fromJson(json['driver'] as Map<String, dynamic>),
+        );
+      } else {
+        return DeliveryAuthResult(
+          success: false,
+          error: json['error']?.toString() ?? 'Incorrect courier email or password.',
+        );
       }
     } catch (e) {
       debugPrint('DeliveryApiService.login error: $e');
+      return const DeliveryAuthResult(
+        success: false,
+        error: 'Unable to connect to server. Please check your internet connection.',
+      );
     }
-    return null;
   }
 
   static Future<bool> updateStatus({

@@ -209,48 +209,42 @@ class StaffAppState extends ChangeNotifier {
     ];
   }
 
+  String? _loginError;
+  String? get loginError => _loginError;
+
   Future<bool> login({
     required String username,
     required String password,
     StaffRole role = StaffRole.deliveryStaff,
   }) async {
+    _loginError = null;
+    notifyListeners();
+
     if (username.trim().isEmpty || password.trim().isEmpty) {
+      _loginError = 'Please enter both username/email and password.';
+      notifyListeners();
       return false;
     }
 
-    // 1. Authenticate against live backend API first
-    try {
-      final remoteUser = await DeliveryApiService.login(
-        username: username,
-        password: password,
-      );
-      if (remoteUser != null) {
-        _currentUser = remoteUser;
-        notifyListeners();
-        unawaited(refreshOrders());
-        return true;
-      }
-    } catch (_) {}
-
-    // 2. Demo fallback if offline
-    final cleanEmail = username.trim().toLowerCase();
-    final isMarco = cleanEmail.contains('marco');
-    final driverId = isMarco ? 'drv-01' : 'drv-00';
-    final driverName = isMarco ? 'Marco Pinder' : 'Devon Miller';
-    final driverPhone = isMarco ? '+1 (242) 555-9011' : '+1 (242) 555-0100';
-
-    _currentUser = StaffUser(
-      id: driverId,
-      name: driverName,
-      email: username.trim(),
-      role: StaffRole.deliveryStaff,
-      phone: driverPhone,
-      isOnline: true,
+    // 1. Authenticate against live backend API
+    final authResult = await DeliveryApiService.login(
+      username: username,
+      password: password,
     );
-    notifyListeners();
 
-    unawaited(refreshOrders());
-    return true;
+    if (authResult.success && authResult.user != null) {
+      _currentUser = authResult.user;
+      _loginError = null;
+      notifyListeners();
+      unawaited(refreshOrders());
+      return true;
+    }
+
+    // Strict authentication failure - DO NOT allow access on wrong password!
+    _currentUser = null;
+    _loginError = authResult.error ?? 'Incorrect courier email or password.';
+    notifyListeners();
+    return false;
   }
 
   void logout() {
