@@ -343,26 +343,30 @@ class _AssignedOrdersScreenState extends State<AssignedOrdersScreen> {
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    if (order.requiresCashCollection)
-                      StatusChip.cashPending(amount: order.totalAmount)
-                    else
-                      StatusChip.paid(),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: AppColors.surfaceVariant,
-                        shape: BoxShape.circle,
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: order.requiresCashCollection
+                            ? StatusChip.cashPending(amount: order.totalAmount)
+                            : StatusChip.paid(),
                       ),
-                      child: const Icon(
-                        Icons.chevron_right_rounded,
-                        size: 18,
-                        color: AppColors.textDark,
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: AppColors.surfaceVariant,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: AppColors.textDark,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),

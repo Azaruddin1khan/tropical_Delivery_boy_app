@@ -360,68 +360,76 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               ],
 
               // 6-Digit Pin Input Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(_otpLength, (index) {
-                  return SizedBox(
-                    width: 46,
-                    height: 56,
-                    child: KeyboardListener(
-                      focusNode: FocusNode(),
-                      onKeyEvent: (event) {
-                        // Handle backspace navigation to previous box
-                        if (event is KeyDownEvent &&
-                            event.logicalKey == LogicalKeyboardKey.backspace &&
-                            _controllers[index].text.isEmpty &&
-                            index > 0) {
-                          _focusNodes[index - 1].requestFocus();
-                        }
-                      },
-                      child: TextFormField(
-                        controller: _controllers[index],
-                        focusNode: _focusNodes[index],
-                        textAlign: TextAlign.center,
-                        keyboardType: TextInputType.number,
-                        maxLength: 1,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textDark,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        decoration: InputDecoration(
-                          counterText: '',
-                          contentPadding: EdgeInsets.zero,
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border, width: 1.5),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: _controllers[index].text.isNotEmpty
-                                  ? AppColors.tropicalYellowDark
-                                  : AppColors.border,
-                              width: 1.5,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  const spacing = 6.0;
+                  final availableWidth = constraints.maxWidth - (_otpLength - 1) * spacing;
+                  final boxWidth = (availableWidth / _otpLength).clamp(36.0, 52.0);
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(_otpLength, (index) {
+                      return SizedBox(
+                        width: boxWidth,
+                        height: 56,
+                        child: KeyboardListener(
+                          focusNode: FocusNode(),
+                          onKeyEvent: (event) {
+                            // Handle backspace navigation to previous box
+                            if (event is KeyDownEvent &&
+                                event.logicalKey == LogicalKeyboardKey.backspace &&
+                                _controllers[index].text.isEmpty &&
+                                index > 0) {
+                              _focusNodes[index - 1].requestFocus();
+                            }
+                          },
+                          child: TextFormField(
+                            controller: _controllers[index],
+                            focusNode: _focusNodes[index],
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            maxLength: 1,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.textDark,
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: AppColors.tropicalYellowDark,
-                              width: 2.2,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: InputDecoration(
+                              counterText: '',
+                              contentPadding: EdgeInsets.zero,
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.border, width: 1.5),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: _controllers[index].text.isNotEmpty
+                                      ? AppColors.tropicalYellowDark
+                                      : AppColors.border,
+                                  width: 1.5,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: AppColors.tropicalYellowDark,
+                                  width: 2.2,
+                                ),
+                              ),
                             ),
+                            onChanged: (val) => _handleOtpChanged(index, val),
                           ),
                         ),
-                        onChanged: (val) => _handleOtpChanged(index, val),
-                      ),
-                    ),
+                      );
+                    }),
                   );
-                }),
+                },
               ),
               const SizedBox(height: 12),
 
@@ -468,8 +476,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               const SizedBox(height: 24),
 
               // Resend OTP Section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   const Text(
                     "Didn't receive the code? ",
