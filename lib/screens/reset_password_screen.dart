@@ -7,12 +7,14 @@ import 'login_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
-  final String? initialOtp;
+  final String? otp;
+  final String? token;
 
   const ResetPasswordScreen({
     super.key,
     required this.email,
-    this.initialOtp,
+    this.otp,
+    this.token,
   });
 
   @override
@@ -29,10 +31,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _obscureConfirm = true;
   bool _isLoading = false;
 
+  bool get _isOtpPreVerified =>
+      (widget.token != null && widget.token!.isNotEmpty) ||
+      (widget.otp != null && widget.otp!.isNotEmpty);
+
   @override
   void initState() {
     super.initState();
-    _otpController = TextEditingController(text: widget.initialOtp ?? '');
+    _otpController = TextEditingController(text: widget.otp ?? '');
   }
 
   @override
@@ -48,10 +54,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
     setState(() => _isLoading = true);
 
+    final otpToUse = widget.otp ?? _otpController.text.trim();
     final result = await DeliveryApiService.resetPassword(
       email: widget.email,
-      otp: _otpController.text.trim(),
+      otp: otpToUse,
       newPassword: _newPasswordController.text.trim(),
+      token: widget.token,
     );
 
     if (!mounted) return;
@@ -74,7 +82,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               ),
               SizedBox(width: 10),
               Text(
-                'Password Reset!',
+                'Password Updated!',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -177,51 +185,87 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Verification code sent to:\n${widget.email}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 28),
 
-                // OTP Code
-                const Text(
-                  '6-Digit Verification Code *',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
+                // Verified Email Status Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.limeGreenLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.limeGreenDark.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.limeGreenDark,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'VERIFIED COURIER IDENTITY',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.limeGreenDark,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            Text(
+                              widget.email,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _otpController,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 6,
+                const SizedBox(height: 24),
+
+                // If OTP wasn't pre-verified (fallback), show OTP field
+                if (!_isOtpPreVerified) ...[
+                  const Text(
+                    '6-Digit Verification Code *',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
                   ),
-                  decoration: const InputDecoration(
-                    hintText: '• • • • • •',
-                    prefixIcon: Icon(Icons.pin_rounded),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _otpController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 6,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: '• • • • • •',
+                      prefixIcon: Icon(Icons.pin_rounded),
+                    ),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Please enter the 6-digit code';
+                      }
+                      return null;
+                    },
                   ),
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Please enter the 6-digit code';
-                    }
-                    if (val.trim().length < 4) {
-                      return 'Code must be at least 4-6 digits';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 18),
+                  const SizedBox(height: 18),
+                ],
 
                 // New Password
                 const Text(
@@ -299,7 +343,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                 // Submit Button
                 PrimaryButton(
-                  text: 'Reset Password',
+                  text: 'Save New Password',
                   icon: Icons.check_circle_outline_rounded,
                   isLoading: _isLoading,
                   variant: ButtonVariant.success,

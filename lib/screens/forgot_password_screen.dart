@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/primary_button.dart';
 import '../services/api_service.dart';
-import 'reset_password_screen.dart';
+import 'otp_verification_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -51,7 +51,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => ResetPasswordScreen(
+          builder: (_) => OtpVerificationScreen(
             email: email,
             initialOtp: demoOtp,
           ),

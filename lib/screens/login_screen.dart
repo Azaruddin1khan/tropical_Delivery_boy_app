@@ -36,11 +36,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // Simulate brief network delay
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    if (!mounted) return;
-
     final state = StaffStateScope.read(context);
     final success = await state.login(
       username: _usernameController.text,
@@ -48,6 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
       role: _selectedRole,
     );
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (success && mounted) {

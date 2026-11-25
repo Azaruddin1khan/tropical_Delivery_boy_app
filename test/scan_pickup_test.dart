@@ -11,7 +11,9 @@ void main() {
     await tester.pumpWidget(const DeliveryCashierApp());
 
     // 1. Log in as driver
-    await tester.tap(find.text('Sign In (Demo)'));
+    await tester.tap(find.text('Autofill: Devon Miller (Eco Scooter)'));
+    await tester.pump();
+    await tester.tap(find.text('Sign In'));
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -58,7 +60,9 @@ void main() {
     await tester.pumpWidget(const DeliveryCashierApp());
 
     // Login
-    await tester.tap(find.text('Sign In (Demo)'));
+    await tester.tap(find.text('Autofill: Devon Miller (Eco Scooter)'));
+    await tester.pump();
+    await tester.tap(find.text('Sign In'));
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pump(const Duration(milliseconds: 400));
 

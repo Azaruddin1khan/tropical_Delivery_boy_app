@@ -93,6 +93,35 @@ class DeliveryApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> verifyOtp({
+    required String email,
+    required String otp,
+  }) async {
+    try {
+      final base = await getBaseUrl();
+      final uri = Uri.parse('$base/api/delivery-boy/auth/verify-otp');
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email.trim(),
+              'otp': otp.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      return json;
+    } catch (e) {
+      debugPrint('DeliveryApiService.verifyOtp error: $e');
+      return {
+        'success': false,
+        'error': 'Unable to connect to server. Please check your internet connection.',
+      };
+    }
+  }
+
   static Future<Map<String, dynamic>> resetPassword({
     required String email,
     required String otp,
