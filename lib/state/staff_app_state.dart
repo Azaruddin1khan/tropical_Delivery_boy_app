@@ -434,9 +434,13 @@ class StaffAppState extends ChangeNotifier {
       final oId = o.id.toUpperCase();
       final oBc = o.barcodeCode.toUpperCase();
       final oQr = o.qrCode.toUpperCase();
+      final kb = 'KB-$oId';
+      final drop = 'DROP-$oId';
       if (oId == clean ||
           oBc == clean ||
           oQr == clean ||
+          kb == clean ||
+          drop == clean ||
           clean.contains(oId) ||
           oId.contains(clean) ||
           clean.contains(oBc) ||
@@ -450,9 +454,13 @@ class StaffAppState extends ChangeNotifier {
       final oId = o.id.toUpperCase();
       final oBc = o.barcodeCode.toUpperCase();
       final oQr = o.qrCode.toUpperCase();
+      final kb = 'KB-$oId';
+      final drop = 'DROP-$oId';
       if (oId == clean ||
           oBc == clean ||
           oQr == clean ||
+          kb == clean ||
+          drop == clean ||
           clean.contains(oId) ||
           oId.contains(clean) ||
           clean.contains(oBc) ||

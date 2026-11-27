@@ -4,7 +4,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/demo_banner.dart';
-import '../core/widgets/primary_button.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_state_scope.dart';
 import 'delivery_route_map_screen.dart';
@@ -44,15 +43,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       facing: CameraFacing.back,
       returnImage: false,
     );
-
-    if (widget.targetOrderCode != null) {
-      _manualInputController.text = widget.targetOrderCode!;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _onSimulateScan(context, sampleCode: widget.targetOrderCode);
-        }
-      });
-    }
   }
 
   @override
@@ -61,6 +51,120 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     _scannerController.dispose();
     _manualInputController.dispose();
     super.dispose();
+  }
+
+  void _showCodeMismatchDialog({
+    required String title,
+    required String description,
+    required String badgeText,
+    required Color badgeColor,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: badgeColor, size: 28),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: badgeColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                badgeText,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: badgeColor,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              description,
+              style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.textDark),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.limeGreenDark,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              if (mounted) {
+                setState(() => _isProcessingScan = false);
+              }
+            },
+            child: const Text('OK, Got It'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _validateAndShowScanResult(BuildContext context, DeliveryOrder order, String rawCode) {
+    final upper = rawCode.toUpperCase().trim();
+    final isCustomerDropCode = upper.startsWith('DROP') ||
+        upper.contains('DROP') ||
+        upper.contains('/DROP');
+    final isKitchenBagCode = upper.startsWith('KB') ||
+        upper.contains('KB-') ||
+        upper.contains('/KITCHEN');
+
+    // 1. Kitchen Pickup Validation:
+    // When the order is in 'assigned' status (waiting for kitchen pickup):
+    // Scanning the Customer Drop Pass MUST NOT trigger pickup!
+    if (order.status == DeliveryOrderStatus.assigned && order.orderType == 'delivery') {
+      if (isCustomerDropCode) {
+        _showCodeMismatchDialog(
+          title: 'Customer Drop Pass Scanned!',
+          description:
+              'Yeh Customer ka Doorstep Delivery (Drop) barcode hai.\n\nKitchen se pickup karne ke liye parcel/bag par laga Kitchen Bag Barcode (KB-${order.id}) scan karein!',
+          badgeText: 'WRONG CODE: CANNOT PICKUP',
+          badgeColor: AppColors.errorRed,
+        );
+        return false;
+      }
+    }
+
+    // 2. Doorstep Handover Validation:
+    // When the order is already 'outForDelivery' (on the way / at doorstep):
+    // Scanning the Kitchen Bag code MUST NOT complete delivery!
+    if (order.status == DeliveryOrderStatus.outForDelivery) {
+      if (isKitchenBagCode) {
+        _showCodeMismatchDialog(
+          title: 'Kitchen Bag Code Scanned!',
+          description:
+              'Kitchen bag pehle hi pickup ho chuka hai!\n\nCustomer ko delivery handover karne ke liye customer ke phone se "Customer Delivery Pass" (DROP-${order.id}) scan karein.',
+          badgeText: 'ALREADY PICKED UP',
+          badgeColor: AppColors.warningOrange,
+        );
+        return false;
+      }
+    }
+
+    _showScanResultBottomSheet(context, order);
+    return true;
   }
 
   void _handleLiveScanDetected(String rawCode) async {
@@ -73,7 +177,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     if (!mounted) return;
 
     if (order != null) {
-      _showScanResultBottomSheet(context, order);
+      _validateAndShowScanResult(context, order, rawCode);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -174,7 +278,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     }
 
     _manualInputController.clear();
-    _showScanResultBottomSheet(context, order);
+    _validateAndShowScanResult(context, order, code);
   }
 
   void _showScanResultBottomSheet(BuildContext context, DeliveryOrder order) {
@@ -916,14 +1020,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     const SizedBox(height: 10),
                   ],
 
-                  PrimaryButton(
-                    text: 'Simulate Scan Customer Barcode (Demo)',
-                    icon: Icons.qr_code_2_rounded,
-                    variant: ButtonVariant.primary,
-                    width: double.infinity,
-                    onPressed: () => _onSimulateScan(context),
-                  ),
-                  const SizedBox(height: 10),
 
                   // Manual ID Entry
                   Row(

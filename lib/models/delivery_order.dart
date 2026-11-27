@@ -55,6 +55,9 @@ class DeliveryOrder {
   bool get isCashOnDelivery =>
       paymentMethod.toLowerCase().contains('cash') && orderType == 'delivery';
 
+  String get kitchenBagCode => 'KB-$id';
+  String get customerDropCode => 'DROP-$id';
+
   bool get requiresCashCollection => !isPaid;
 
   int get totalItemCount => items.fold(0, (sum, item) => sum + item.quantity);
