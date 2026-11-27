@@ -492,14 +492,14 @@ class StaffAppState extends ChangeNotifier {
 
       if (result.isAssignedToOther) {
         throw OrderAssignmentException(
-          'Yeh order kisi aur delivery courier (${result.assignedDriverName ?? "another courier"}) ko assigned hai!\n\nAap sirf apne assigned orders hi pickup kar sakte hain.',
+          'This order is assigned to another delivery courier (${result.assignedDriverName ?? "another courier"}).\n\nYou can only scan and pick up orders assigned to you.',
           assignedDriverName: result.assignedDriverName,
         );
       }
 
       if (result.isUnassigned) {
         throw OrderAssignmentException(
-          'Yeh order abhi kisi bhi courier ko assign nahi hua hai!\n\nKripya Admin se pehle order assign karwayein.',
+          'This order has not been assigned to any courier yet.\n\nPlease assign it in the Admin portal before pickup.',
         );
       }
 
@@ -519,7 +519,7 @@ class StaffAppState extends ChangeNotifier {
 
           if (!isMine) {
             throw OrderAssignmentException(
-              'Yeh order kisi aur delivery courier (${remote.assignedDriverName ?? "another courier"}) ko assigned hai!\n\nAap sirf apne assigned orders hi pickup kar sakte hain.',
+              'This order is assigned to another delivery courier (${remote.assignedDriverName ?? "another courier"}).\n\nYou can only scan and pick up orders assigned to you.',
               assignedDriverName: remote.assignedDriverName,
             );
           }

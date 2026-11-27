@@ -140,7 +140,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         _showCodeMismatchDialog(
           title: 'Customer Drop Pass Scanned!',
           description:
-              'Yeh Customer ka Doorstep Delivery (Drop) barcode hai.\n\nKitchen se pickup karne ke liye parcel/bag par laga Kitchen Bag Barcode (KB-${order.id}) scan karein!',
+              'This is the Customer Doorstep Drop pass.\n\nFor kitchen pickup, please scan the Kitchen Bag barcode (KB-${order.id}) affixed to the parcel bag.',
           badgeText: 'WRONG CODE: CANNOT PICKUP',
           badgeColor: AppColors.errorRed,
         );
@@ -156,7 +156,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         _showCodeMismatchDialog(
           title: 'Kitchen Bag Code Scanned!',
           description:
-              'Kitchen bag pehle hi pickup ho chuka hai!\n\nCustomer ko delivery handover karne ke liye customer ke phone se "Customer Delivery Pass" (DROP-${order.id}) scan karein.',
+              'This kitchen bag has already been picked up!\n\nTo confirm doorstep delivery, scan the "Customer Delivery Pass" (DROP-${order.id}) from the customer\'s phone.',
           badgeText: 'ALREADY PICKED UP',
           badgeColor: AppColors.warningOrange,
         );
@@ -195,7 +195,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             _showCodeMismatchDialog(
               title: 'Assigned to Another Courier!',
               description:
-                  'Yeh order kisi aur delivery courier (${order.assignedDriverName}) ko assigned hai!\n\nAap sirf apne assigned orders hi pickup kar sakte hain.',
+                  'This order is assigned to another delivery courier (${order.assignedDriverName ?? "another courier"}).\n\nYou can only scan and pick up orders assigned to you.',
               badgeText: 'NOT YOUR ORDER',
               badgeColor: AppColors.errorRed,
             );
@@ -329,7 +329,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           _showCodeMismatchDialog(
             title: 'Assigned to Another Courier!',
             description:
-                'Yeh order kisi aur delivery courier (${order.assignedDriverName}) ko assigned hai!\n\nAap sirf apne assigned orders hi pickup kar sakte hain.',
+                'This order is assigned to another delivery courier (${order.assignedDriverName ?? "another courier"}).\n\nYou can only scan and pick up orders assigned to you.',
             badgeText: 'NOT YOUR ORDER',
             badgeColor: AppColors.errorRed,
           );
