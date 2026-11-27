@@ -18,6 +18,22 @@ class DeliveryAuthResult {
   });
 }
 
+class OrderVerifyResult {
+  final DeliveryOrder? order;
+  final bool isAssignedToOther;
+  final bool isUnassigned;
+  final String? assignedDriverName;
+  final String? errorMessage;
+
+  const OrderVerifyResult({
+    this.order,
+    this.isAssignedToOther = false,
+    this.isUnassigned = false,
+    this.assignedDriverName,
+    this.errorMessage,
+  });
+}
+
 class DeliveryApiService {
   static const String liveCloudBaseUrl = 'https://tropical-admin-six.vercel.app';
   static String? _resolvedBaseUrl;
@@ -298,7 +314,7 @@ class DeliveryApiService {
     }
   }
 
-  static Future<DeliveryOrder?> verifyCode(String code) async {
+  static Future<OrderVerifyResult> verifyCodeResult(String code, {String? driverId}) async {
     try {
       final base = await getBaseUrl();
       final uri = Uri.parse('$base/api/delivery-boy/orders/verify-code');
@@ -306,19 +322,38 @@ class DeliveryApiService {
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'code': code.trim()}),
+            body: jsonEncode({
+              'code': code.trim(),
+              'driverId': ?driverId,
+            }),
           )
           .timeout(const Duration(seconds: 4));
 
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        if (json['success'] == true && json['order'] != null) {
-          return DeliveryOrder.fromJson(json['order'] as Map<String, dynamic>);
-        }
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (response.statusCode == 200 && json['success'] == true && json['order'] != null) {
+        return OrderVerifyResult(
+          order: DeliveryOrder.fromJson(json['order'] as Map<String, dynamic>),
+        );
+      } else if (response.statusCode == 403) {
+        final errorCode = json['code'] as String? ?? '';
+        final driverName = json['assignedDriverName'] as String?;
+        final errMsg = json['error'] as String? ?? 'Not allowed';
+        return OrderVerifyResult(
+          isAssignedToOther: errorCode == 'ASSIGNED_TO_OTHER',
+          isUnassigned: errorCode == 'UNASSIGNED',
+          assignedDriverName: driverName,
+          errorMessage: errMsg,
+        );
       }
     } catch (e) {
-      debugPrint('DeliveryApiService.verifyCode error: $e');
+      debugPrint('DeliveryApiService.verifyCodeResult error: $e');
     }
-    return null;
+    return const OrderVerifyResult();
+  }
+
+  static Future<DeliveryOrder?> verifyCode(String code, {String? driverId}) async {
+    final res = await verifyCodeResult(code, driverId: driverId);
+    return res.order;
   }
 }

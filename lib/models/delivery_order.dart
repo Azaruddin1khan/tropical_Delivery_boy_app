@@ -30,6 +30,8 @@ class DeliveryOrder {
   final String? deliveryNotes;
   final String orderType; // 'delivery' or 'pickup'
   final DateTime? deliveredAt;
+  final String? assignedDriverId;
+  final String? assignedDriverName;
 
   const DeliveryOrder({
     required this.id,
@@ -50,6 +52,8 @@ class DeliveryOrder {
     this.deliveryNotes,
     this.orderType = 'delivery',
     this.deliveredAt,
+    this.assignedDriverId,
+    this.assignedDriverName,
   });
 
   bool get isCashOnDelivery =>
@@ -81,6 +85,8 @@ class DeliveryOrder {
     String? deliveryNotes,
     String? orderType,
     DateTime? deliveredAt,
+    String? assignedDriverId,
+    String? assignedDriverName,
   }) {
     return DeliveryOrder(
       id: id ?? this.id,
@@ -101,6 +107,8 @@ class DeliveryOrder {
       deliveryNotes: deliveryNotes ?? this.deliveryNotes,
       orderType: orderType ?? this.orderType,
       deliveredAt: deliveredAt ?? this.deliveredAt,
+      assignedDriverId: assignedDriverId ?? this.assignedDriverId,
+      assignedDriverName: assignedDriverName ?? this.assignedDriverName,
     );
   }
 
@@ -163,6 +171,8 @@ class DeliveryOrder {
       deliveredAt: json['deliveredAt'] != null
           ? DateTime.tryParse(json['deliveredAt'].toString())
           : null,
+      assignedDriverId: json['assignedDriverId'] as String?,
+      assignedDriverName: json['assignedDriverName'] as String?,
     );
   }
 
@@ -185,5 +195,7 @@ class DeliveryOrder {
     if (deliveryNotes != null) 'deliveryNotes': deliveryNotes,
     'orderType': orderType,
     if (deliveredAt != null) 'deliveredAt': deliveredAt!.toIso8601String(),
+    if (assignedDriverId != null) 'assignedDriverId': assignedDriverId,
+    if (assignedDriverName != null) 'assignedDriverName': assignedDriverName,
   };
 }

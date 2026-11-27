@@ -6,6 +6,16 @@ import '../models/order_item.dart';
 import '../models/delivery_order.dart';
 import '../services/api_service.dart';
 
+class OrderAssignmentException implements Exception {
+  final String message;
+  final String? assignedDriverName;
+
+  OrderAssignmentException(this.message, {this.assignedDriverName});
+
+  @override
+  String toString() => message;
+}
+
 class StaffAppState extends ChangeNotifier {
   StaffUser? _currentUser;
   List<DeliveryOrder> _assignedOrders = [];
@@ -477,8 +487,44 @@ class StaffAppState extends ChangeNotifier {
     if (local != null) return local;
 
     try {
-      final remote = await DeliveryApiService.verifyCode(code);
+      final driverId = _currentUser?.id;
+      final result = await DeliveryApiService.verifyCodeResult(code, driverId: driverId);
+
+      if (result.isAssignedToOther) {
+        throw OrderAssignmentException(
+          'Yeh order kisi aur delivery courier (${result.assignedDriverName ?? "another courier"}) ko assigned hai!\n\nAap sirf apne assigned orders hi pickup kar sakte hain.',
+          assignedDriverName: result.assignedDriverName,
+        );
+      }
+
+      if (result.isUnassigned) {
+        throw OrderAssignmentException(
+          'Yeh order abhi kisi bhi courier ko assign nahi hua hai!\n\nKripya Admin se pehle order assign karwayein.',
+        );
+      }
+
+      final remote = result.order;
       if (remote != null) {
+        // Double check driver ownership client-side
+        if (_currentUser != null &&
+            remote.assignedDriverId != null &&
+            remote.assignedDriverId!.isNotEmpty) {
+          final curId = _currentUser!.id.toLowerCase();
+          final curName = _currentUser!.name.toLowerCase();
+          final ordDrvId = (remote.assignedDriverId ?? '').toLowerCase();
+          final ordDrvName = (remote.assignedDriverName ?? '').toLowerCase();
+          final isMine = ordDrvId == curId ||
+              ordDrvName.contains(curName) ||
+              curName.contains(ordDrvName);
+
+          if (!isMine) {
+            throw OrderAssignmentException(
+              'Yeh order kisi aur delivery courier (${remote.assignedDriverName ?? "another courier"}) ko assigned hai!\n\nAap sirf apne assigned orders hi pickup kar sakte hain.',
+              assignedDriverName: remote.assignedDriverName,
+            );
+          }
+        }
+
         final exists = _assignedOrders.any((o) => o.id == remote.id);
         if (!exists) {
           _assignedOrders.insert(0, remote);
@@ -486,6 +532,8 @@ class StaffAppState extends ChangeNotifier {
         }
         return remote;
       }
+    } on OrderAssignmentException {
+      rethrow;
     } catch (_) {}
     return null;
   }

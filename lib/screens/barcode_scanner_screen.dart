@@ -5,6 +5,7 @@ import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/demo_banner.dart';
 import '../models/delivery_order.dart';
+import '../state/staff_app_state.dart';
 import '../state/staff_state_scope.dart';
 import 'delivery_route_map_screen.dart';
 import 'order_details_screen.dart';
@@ -172,25 +173,59 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     _isProcessingScan = true;
 
     final state = StaffStateScope.read(context);
-    final order = await state.findOrderByCodeOrFetch(rawCode);
+    try {
+      final order = await state.findOrderByCodeOrFetch(rawCode);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (order != null) {
-      _validateAndShowScanResult(context, order, rawCode);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Scanned code "$rawCode" — no matching active order found.'),
-          backgroundColor: AppColors.warningOrange,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() => _isProcessingScan = false);
+      if (order != null) {
+        final user = state.currentUser;
+        if (user != null &&
+            order.assignedDriverId != null &&
+            order.assignedDriverId!.isNotEmpty) {
+          final curId = user.id.toLowerCase();
+          final curName = user.name.toLowerCase();
+          final ordDrvId = (order.assignedDriverId ?? '').toLowerCase();
+          final ordDrvName = (order.assignedDriverName ?? '').toLowerCase();
+          final isMine = ordDrvId == curId ||
+              ordDrvName.contains(curName) ||
+              curName.contains(ordDrvName);
+
+          if (!isMine) {
+            _showCodeMismatchDialog(
+              title: 'Assigned to Another Courier!',
+              description:
+                  'Yeh order kisi aur delivery courier (${order.assignedDriverName}) ko assigned hai!\n\nAap sirf apne assigned orders hi pickup kar sakte hain.',
+              badgeText: 'NOT YOUR ORDER',
+              badgeColor: AppColors.errorRed,
+            );
+            return;
+          }
         }
-      });
+
+        _validateAndShowScanResult(context, order, rawCode);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Scanned code "$rawCode" — no matching active order found.'),
+            backgroundColor: AppColors.warningOrange,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() => _isProcessingScan = false);
+          }
+        });
+      }
+    } on OrderAssignmentException catch (e) {
+      if (!mounted) return;
+      _showCodeMismatchDialog(
+        title: 'Assigned to Another Courier!',
+        description: e.message,
+        badgeText: 'NOT YOUR ORDER',
+        badgeColor: AppColors.errorRed,
+      );
     }
   }
 
@@ -256,29 +291,63 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     }
 
     final state = StaffStateScope.read(context);
-    final order = await state.findOrderByCodeOrFetch(code);
+    try {
+      final order = await state.findOrderByCodeOrFetch(code);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (order == null) {
-      showDialog(
-        context: context,
-        builder: (dialogCtx) => AlertDialog(
-          title: const Text('Order Not Found'),
-          content: Text('No active order matched the code "$code".'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
+      if (order == null) {
+        showDialog(
+          context: context,
+          builder: (dialogCtx) => AlertDialog(
+            title: const Text('Order Not Found'),
+            content: Text('No active order matched the code "$code".'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      final user = state.currentUser;
+      if (user != null &&
+          order.assignedDriverId != null &&
+          order.assignedDriverId!.isNotEmpty) {
+        final curId = user.id.toLowerCase();
+        final curName = user.name.toLowerCase();
+        final ordDrvId = (order.assignedDriverId ?? '').toLowerCase();
+        final ordDrvName = (order.assignedDriverName ?? '').toLowerCase();
+        final isMine = ordDrvId == curId ||
+            ordDrvName.contains(curName) ||
+            curName.contains(ordDrvName);
+
+        if (!isMine) {
+          _showCodeMismatchDialog(
+            title: 'Assigned to Another Courier!',
+            description:
+                'Yeh order kisi aur delivery courier (${order.assignedDriverName}) ko assigned hai!\n\nAap sirf apne assigned orders hi pickup kar sakte hain.',
+            badgeText: 'NOT YOUR ORDER',
+            badgeColor: AppColors.errorRed,
+          );
+          return;
+        }
+      }
+
+      _manualInputController.clear();
+      _validateAndShowScanResult(context, order, code);
+    } on OrderAssignmentException catch (e) {
+      if (!mounted) return;
+      _showCodeMismatchDialog(
+        title: 'Assigned to Another Courier!',
+        description: e.message,
+        badgeText: 'NOT YOUR ORDER',
+        badgeColor: AppColors.errorRed,
       );
-      return;
     }
-
-    _manualInputController.clear();
-    _validateAndShowScanResult(context, order, code);
   }
 
   void _showScanResultBottomSheet(BuildContext context, DeliveryOrder order) {
