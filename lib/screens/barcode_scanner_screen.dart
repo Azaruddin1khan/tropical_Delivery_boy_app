@@ -111,35 +111,34 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
-              if (mounted) {
-                setState(() => _isProcessingScan = false);
-              }
             },
             child: const Text('OK, Got It'),
           ),
         ],
       ),
-    );
+    ).then((_) {
+      if (mounted) {
+        setState(() => _isProcessingScan = false);
+      }
+    });
   }
 
   bool _validateAndShowScanResult(BuildContext context, DeliveryOrder order, String rawCode) {
     final upper = rawCode.toUpperCase().trim();
-    final isCustomerDropCode = upper.startsWith('DROP') ||
-        upper.contains('DROP') ||
-        upper.contains('/DROP');
     final isKitchenBagCode = upper.startsWith('KB') ||
         upper.contains('KB-') ||
         upper.contains('/KITCHEN');
 
     // 1. Kitchen Pickup Validation:
     // When the order is in 'assigned' status (waiting for kitchen pickup):
-    // Scanning the Customer Drop Pass MUST NOT trigger pickup!
+    // The driver MUST scan the Kitchen Bag barcode (KB-...) on the parcel!
+    // Scanning the Customer Pass / Customer QR Code / Order ID MUST NOT trigger pickup!
     if (order.status == DeliveryOrderStatus.assigned && order.orderType == 'delivery') {
-      if (isCustomerDropCode) {
+      if (!isKitchenBagCode) {
         _showCodeMismatchDialog(
-          title: 'Customer Drop Pass Scanned!',
+          title: 'Customer Pass Scanned!',
           description:
-              'This is the Customer Doorstep Drop pass.\n\nFor kitchen pickup, please scan the Kitchen Bag barcode (KB-${order.id}) affixed to the parcel bag.',
+              'This is a Customer Pass / QR Code.\n\nYou cannot pick up the order using the customer\'s pass!\n\nFor kitchen pickup, please scan the Kitchen Bag barcode (KB-${order.id}) affixed to the parcel bag in the kitchen.',
           badgeText: 'WRONG CODE: CANNOT PICKUP',
           badgeColor: AppColors.errorRed,
         );
@@ -196,6 +195,28 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               description:
                   'This order is assigned to another delivery courier (${order.assignedDriverName ?? "another courier"}).\n\nYou can only scan and pick up orders assigned to you.',
               badgeText: 'NOT YOUR ORDER',
+              badgeColor: AppColors.errorRed,
+            );
+            return;
+          }
+        }
+
+        if (widget.targetOrderCode != null && widget.targetOrderCode!.isNotEmpty) {
+          final targetClean = widget.targetOrderCode!
+              .toUpperCase()
+              .replaceAll('KB-', '')
+              .replaceAll('DROP-', '')
+              .replaceAll('HTTPS://TROPICALGYROS.DEMO/ORDER/', '')
+              .replaceAll('/DROP', '')
+              .replaceAll('/KITCHEN', '')
+              .trim();
+          final orderClean = order.id.toUpperCase().trim();
+          if (targetClean != orderClean) {
+            _showCodeMismatchDialog(
+              title: 'Wrong Order Scanned!',
+              description:
+                  'You opened the scanner for Order #${widget.targetOrderCode}.\n\nThe scanned code is for a different order (#${order.id}).',
+              badgeText: 'WRONG ORDER',
               badgeColor: AppColors.errorRed,
             );
             return;
@@ -280,6 +301,28 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             description:
                 'This order is assigned to another delivery courier (${order.assignedDriverName ?? "another courier"}).\n\nYou can only scan and pick up orders assigned to you.',
             badgeText: 'NOT YOUR ORDER',
+            badgeColor: AppColors.errorRed,
+          );
+          return;
+        }
+      }
+
+      if (widget.targetOrderCode != null && widget.targetOrderCode!.isNotEmpty) {
+        final targetClean = widget.targetOrderCode!
+            .toUpperCase()
+            .replaceAll('KB-', '')
+            .replaceAll('DROP-', '')
+            .replaceAll('HTTPS://TROPICALGYROS.DEMO/ORDER/', '')
+            .replaceAll('/DROP', '')
+            .replaceAll('/KITCHEN', '')
+            .trim();
+        final orderClean = order.id.toUpperCase().trim();
+        if (targetClean != orderClean) {
+          _showCodeMismatchDialog(
+            title: 'Wrong Order Entered!',
+            description:
+                'You opened the scanner for Order #${widget.targetOrderCode}.\n\nThe entered code is for a different order (#${order.id}).',
+            badgeText: 'WRONG ORDER',
             badgeColor: AppColors.errorRed,
           );
           return;
