@@ -24,19 +24,6 @@ class OrderDetailsScreen extends StatefulWidget {
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   bool _isProcessing = false;
 
-  void _handleMarkOutForDelivery(DeliveryOrder order) {
-    final state = StaffStateScope.read(context);
-    state.updateOrderStatus(order.id, DeliveryOrderStatus.outForDelivery);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Order ${order.id} is now Out for Delivery! 🛵 (Local demo state)',
-        ),
-        backgroundColor: AppColors.oceanBlue,
-      ),
-    );
-  }
-
   void _handleMarkCashReceived(DeliveryOrder order) {
     showDialog(
       context: context,
@@ -771,8 +758,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 ),
                 child: Column(
                   children: [
-                    if (order.status == DeliveryOrderStatus.assigned &&
-                        order.orderType == 'delivery') ...[
+                    if (order.status == DeliveryOrderStatus.assigned) ...[
                       PrimaryButton(
                         text: 'Scan Kitchen Bag to Pickup',
                         icon: Icons.qr_code_scanner_rounded,
@@ -788,23 +774,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                           );
                         },
                       ),
-                      const SizedBox(height: 8),
-                      PrimaryButton(
-                        text: 'Start Delivery / En Route (Skip Scan)',
-                        icon: Icons.directions_bike_rounded,
-                        variant: ButtonVariant.secondary,
-                        width: double.infinity,
-                        onPressed: () => _handleMarkOutForDelivery(order),
-                      ),
-                    ] else if (order.status == DeliveryOrderStatus.assigned)
-                      PrimaryButton(
-                        text: 'Start Delivery / En Route',
-                        icon: Icons.directions_bike_rounded,
-                        variant: ButtonVariant.secondary,
-                        width: double.infinity,
-                        onPressed: () => _handleMarkOutForDelivery(order),
-                      )
-                    else if (order.orderType == 'pickup')
+                    ] else if (order.orderType == 'pickup')
                       PrimaryButton(
                         text: 'Complete Customer Pickup',
                         icon: Icons.check_circle_rounded,
