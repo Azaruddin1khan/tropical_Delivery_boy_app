@@ -164,9 +164,7 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
   }
 
   void _showManualCodeEntryDialog(BuildContext context) {
-    final textController = TextEditingController(
-      text: widget.order.customerDropCode,
-    );
+    final textController = TextEditingController();
     bool isSubmitting = false;
     String? errorMessage;
 

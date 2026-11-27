@@ -43,10 +43,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       facing: CameraFacing.back,
       returnImage: false,
     );
-
-    if (widget.targetOrderCode != null && widget.targetOrderCode!.isNotEmpty) {
-      _manualInputController.text = widget.targetOrderCode!;
-    }
   }
 
   @override
@@ -1007,9 +1003,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                           controller: _manualInputController,
                           textCapitalization: TextCapitalization.characters,
                           decoration: InputDecoration(
-                            hintText: widget.targetOrderCode != null
-                                ? 'e.g. ${widget.targetOrderCode}'
-                                : 'Enter Order ID or Barcode',
+                            hintText: 'Enter code (e.g. KB-... / DROP-...)',
                             isDense: true,
                             prefixIcon: const Icon(Icons.qr_code_rounded, size: 18),
                             contentPadding: const EdgeInsets.symmetric(
