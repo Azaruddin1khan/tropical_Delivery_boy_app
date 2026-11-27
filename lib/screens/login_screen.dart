@@ -77,6 +77,14 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  void _autofillAjju() {
+    setState(() {
+      _selectedRole = StaffRole.deliveryStaff;
+      _usernameController.text = 'ajju@yopmail.com';
+      _passwordController.text = 'Ajju@123';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -349,6 +357,33 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       label: const Text(
                         'Autofill: Marco Pinder (Live Radar)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(
+                        Icons.two_wheeler_rounded,
+                        size: 16,
+                        color: AppColors.oceanBlueDark,
+                      ),
+                      onPressed: _autofillAjju,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.border),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      label: const Text(
+                        'Autofill: Ajju (Motorcycle)',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,

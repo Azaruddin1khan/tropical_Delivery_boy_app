@@ -63,12 +63,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     super.dispose();
   }
 
-  void _handleLiveScanDetected(String rawCode) {
+  void _handleLiveScanDetected(String rawCode) async {
     if (_isProcessingScan) return;
     _isProcessingScan = true;
 
     final state = StaffStateScope.read(context);
-    final order = state.findOrderByCode(rawCode);
+    final order = await state.findOrderByCodeOrFetch(rawCode);
+
+    if (!mounted) return;
 
     if (order != null) {
       _showScanResultBottomSheet(context, order);
@@ -138,7 +140,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     _showScanResultBottomSheet(context, order);
   }
 
-  void _handleManualLookup(BuildContext context) {
+  void _handleManualLookup(BuildContext _) async {
     final code = _manualInputController.text.trim();
     if (code.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -150,17 +152,19 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     }
 
     final state = StaffStateScope.read(context);
-    final order = state.findOrderByCode(code);
+    final order = await state.findOrderByCodeOrFetch(code);
+
+    if (!mounted) return;
 
     if (order == null) {
       showDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
+        builder: (dialogCtx) => AlertDialog(
           title: const Text('Order Not Found'),
           content: Text('No active order matched the code "$code".'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
+              onPressed: () => Navigator.of(dialogCtx).pop(),
               child: const Text('Close'),
             ),
           ],

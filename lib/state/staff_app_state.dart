@@ -10,12 +10,33 @@ class StaffAppState extends ChangeNotifier {
   StaffUser? _currentUser;
   List<DeliveryOrder> _assignedOrders = [];
   List<DeliveryOrder> _deliveryHistory = [];
+  Timer? _pollingTimer;
 
   StaffUser? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null;
   List<DeliveryOrder> get assignedOrders => List.unmodifiable(_assignedOrders);
   List<DeliveryOrder> get deliveryHistory =>
       List.unmodifiable(_deliveryHistory);
+
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (_currentUser != null) {
+        refreshOrders();
+      }
+    });
+  }
+
+  void _stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _stopPolling();
+    super.dispose();
+  }
 
   int get pendingCashOrdersCount => _assignedOrders
       .where((o) => o.requiresCashCollection && o.orderType == 'delivery')
@@ -235,6 +256,7 @@ class StaffAppState extends ChangeNotifier {
     if (authResult.success && authResult.user != null) {
       _currentUser = authResult.user;
       _loginError = null;
+      _startPolling();
       notifyListeners();
       unawaited(refreshOrders());
       return true;
@@ -290,6 +312,7 @@ class StaffAppState extends ChangeNotifier {
   }
 
   void logout() {
+    _stopPolling();
     _currentUser = null;
     notifyListeners();
   }
@@ -303,10 +326,8 @@ class StaffAppState extends ChangeNotifier {
       final liveHistory =
           await DeliveryApiService.fetchDeliveryHistory(driverId);
 
-      if (liveAssigned.isNotEmpty) {
-        _assignedOrders = liveAssigned;
-      }
-      if (liveHistory.isNotEmpty) {
+      _assignedOrders = liveAssigned;
+      if (liveHistory.isNotEmpty || _deliveryHistory.any((o) => o.id.startsWith('TG-80'))) {
         _deliveryHistory = liveHistory;
       }
       notifyListeners();
@@ -440,6 +461,24 @@ class StaffAppState extends ChangeNotifier {
       }
     }
 
+    return null;
+  }
+
+  Future<DeliveryOrder?> findOrderByCodeOrFetch(String code) async {
+    final local = findOrderByCode(code);
+    if (local != null) return local;
+
+    try {
+      final remote = await DeliveryApiService.verifyCode(code);
+      if (remote != null) {
+        final exists = _assignedOrders.any((o) => o.id == remote.id);
+        if (!exists) {
+          _assignedOrders.insert(0, remote);
+          notifyListeners();
+        }
+        return remote;
+      }
+    } catch (_) {}
     return null;
   }
 
