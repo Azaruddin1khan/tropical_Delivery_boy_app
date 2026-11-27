@@ -8,8 +8,8 @@ import '../core/constants/app_constants.dart';
 import '../core/constants/nassau_route_data.dart';
 import '../core/theme/app_colors.dart';
 import '../models/delivery_order.dart';
+import '../state/staff_app_state.dart';
 import '../state/staff_state_scope.dart';
-import '../widgets/swipe_to_deliver_button.dart';
 import 'barcode_scanner_screen.dart';
 
 class DeliveryRouteMapScreen extends StatefulWidget {
@@ -163,108 +163,178 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
     );
   }
 
-  void _showProximityBlockedDialog(double distanceMeters) {
+  void _showManualCodeEntryDialog(BuildContext context) {
+    final textController = TextEditingController(text: widget.order.customerDropCode);
+    bool isSubmitting = false;
+    String? errorMessage;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.pin_drop_rounded,
-                color: Color(0xFFD97706),
-                size: 24,
-              ),
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.pin_rounded, color: AppColors.oceanBlue),
+                SizedBox(width: 8),
+                Text('Enter Drop Code', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              ],
             ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'Doorstep Geofence',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Cannot mark order #${widget.order.id} as Delivered yet!',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'You are currently ${_formatDistance(distanceMeters)} away from the customer drop location.\n\nTropical Gyros policy requires couriers to be within 200 meters of the customer doorstep before swiping Delivered.',
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.info_outline_rounded,
-                    size: 16,
-                    color: Color(0xFF475569),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ask the customer for their Delivery Pass code (from customer app "View Delivery Pass"):',
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: textController,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: InputDecoration(
+                    labelText: 'Drop Pass Code',
+                    hintText: 'e.g. DROP-${widget.order.id}',
+                    prefixIcon: const Icon(Icons.qr_code_rounded),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    errorText: errorMessage,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Required: <= 200m | Current: ${_formatDistance(distanceMeters)}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF334155),
-                      ),
+                ),
+                if (widget.order.requiresCashCollection) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.warningOrangeLight,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Cash to Collect (COD):',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warningOrange),
+                        ),
+                        Text(
+                          '${AppConstants.currency}${widget.order.totalAmount.toStringAsFixed(2)}',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Keep Navigating'),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.oceanBlue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                child: const Text('Cancel'),
               ),
-            ),
-            icon: const Icon(Icons.bolt_rounded, size: 16),
-            label: const Text('⚡ Test: Jump to Doorstep'),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              _jumpToDoorstep();
-            },
-          ),
-        ],
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.limeGreen,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final inputCode = textController.text.trim().toUpperCase();
+                        if (inputCode.isEmpty) {
+                          setDialogState(() => errorMessage = 'Please enter a code');
+                          return;
+                        }
+                        setDialogState(() {
+                          isSubmitting = true;
+                          errorMessage = null;
+                        });
+
+                        final navigator = Navigator.of(context);
+                        final messenger = ScaffoldMessenger.of(context);
+                        final dialogNav = Navigator.of(dialogCtx);
+                        final state = StaffStateScope.read(context);
+
+                        try {
+                          final verifiedOrder = await state.findOrderByCodeOrFetch(inputCode);
+                          if (verifiedOrder == null) {
+                            setDialogState(() {
+                              isSubmitting = false;
+                              errorMessage = 'Invalid code. Order not found.';
+                            });
+                            return;
+                          }
+
+                          if (verifiedOrder.id != widget.order.id) {
+                            setDialogState(() {
+                              isSubmitting = false;
+                              errorMessage = 'This code is for a different order (#${verifiedOrder.id}).';
+                            });
+                            return;
+                          }
+
+                          // Check if Kitchen Bag code was entered by mistake
+                          final isKitchenBagCode = inputCode.startsWith('KB') ||
+                              inputCode.contains('KB-') ||
+                              inputCode.contains('/KITCHEN');
+                          if (isKitchenBagCode) {
+                            setDialogState(() {
+                              isSubmitting = false;
+                              errorMessage =
+                                  'This is the kitchen pickup code. Please enter the Customer Delivery Pass code (DROP-${widget.order.id}).';
+                            });
+                            return;
+                          }
+
+                          // Success! Complete delivery
+                          state.markOrderDelivered(widget.order.id);
+                          dialogNav.pop();
+                          if (navigator.canPop()) {
+                            navigator.pop();
+                          }
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('Order #${widget.order.id} verified and marked Delivered! 🎉'),
+                              backgroundColor: AppColors.limeGreenDark,
+                            ),
+                          );
+                        } on OrderAssignmentException catch (e) {
+                          setDialogState(() {
+                            isSubmitting = false;
+                            errorMessage = e.message;
+                          });
+                        } catch (e) {
+                          setDialogState(() {
+                            isSubmitting = false;
+                            errorMessage = 'Verification failed: $e';
+                          });
+                        }
+                      },
+                child: isSubmitting
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Verify & Deliver'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final state = StaffStateScope.of(context);
+    final activeOrder = state.findOrderByCode(widget.order.id);
+    if (activeOrder == null ||
+        activeOrder.status == DeliveryOrderStatus.delivered) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      });
+    }
+
     // Initial camera centered comfortably on Nassau route
     const initialCenter = ll.LatLng(25.0590, -77.3750);
 
@@ -779,6 +849,42 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                         ),
                       ),
 
+                      // Verification requirement notice
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.verified_user_rounded,
+                              size: 16,
+                              color: AppColors.oceanBlueDark,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Scan customer pass or enter code to complete delivery.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.oceanBlueDark,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Button 1: Scan Customer Drop Pass (Camera QR / Barcode)
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
@@ -810,33 +916,32 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                           },
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
 
-                      // Interactive "Swipe to Deliver" slider (Locked when outside 200m)
-                      SwipeToDeliverButton(
-                        enabled: isNearDrop,
-                        label: 'Delivered',
-                        disabledLabel:
-                            '🔒 Reach Drop Location (${_formatDistance(distanceMeters)})',
-                        height: 52,
-                        onDisabledTap: () =>
-                            _showProximityBlockedDialog(distanceMeters),
-                        onDelivered: () {
-                          final state = StaffStateScope.read(context);
-                          state.updateOrderStatus(
-                            widget.order.id,
-                            DeliveryOrderStatus.delivered,
-                          );
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Order #${widget.order.id} marked as Delivered at Doorstep! 🎉',
-                              ),
-                              backgroundColor: AppColors.limeGreenDark,
+                      // Button 2: Enter Drop Code Manually
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.keyboard_alt_rounded, size: 18),
+                          label: const Text(
+                            'Enter Drop Code Manually',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
                             ),
-                          );
-                        },
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.oceanBlue,
+                            side: const BorderSide(color: AppColors.oceanBlue),
+                            padding: const EdgeInsets.symmetric(vertical: 11),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () {
+                            _showManualCodeEntryDialog(context);
+                          },
+                        ),
                       ),
                     ],
                   ),
