@@ -10,6 +10,7 @@ import '../core/theme/app_colors.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_state_scope.dart';
 import '../widgets/swipe_to_deliver_button.dart';
+import 'barcode_scanner_screen.dart';
 
 class DeliveryRouteMapScreen extends StatefulWidget {
   final DeliveryOrder order;
@@ -278,6 +279,22 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
         foregroundColor: AppColors.textDark,
         elevation: 0.5,
         actions: [
+          // Scan Customer Drop Pass button
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner_rounded),
+            tooltip: 'Scan Customer Drop Pass',
+            color: AppColors.oceanBlueDark,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => BarcodeScannerScreen(
+                    targetOrderCode: widget.order.customerDropCode,
+                  ),
+                ),
+              );
+            },
+          ),
+
           // Play / Pause GPS stream simulation
           IconButton(
             icon: Icon(
@@ -761,6 +778,39 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                           ],
                         ),
                       ),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+                          label: const Text(
+                            'Scan Customer Drop Pass',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.limeGreen,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 1,
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => BarcodeScannerScreen(
+                                  targetOrderCode: widget.order.customerDropCode,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 10),
 
                       // Interactive "Swipe to Deliver" slider (Locked when outside 200m)
                       SwipeToDeliverButton(

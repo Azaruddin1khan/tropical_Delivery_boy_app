@@ -400,27 +400,54 @@ class _AssignedOrdersScreenState extends State<AssignedOrdersScreen> {
                 ),
               )
             else if (order.status == DeliveryOrderStatus.outForDelivery)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.navigation_rounded, size: 18),
-                  label: const Text('Start Live Navigation 🛵'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.oceanBlue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                      label: const Text('Scan Drop Pass'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.limeGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => BarcodeScannerScreen(
+                              targetOrderCode: order.customerDropCode,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => DeliveryRouteMapScreen(order: order),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.navigation_rounded, size: 18),
+                      label: const Text('Live Map 🛵'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.oceanBlue,
+                        side: const BorderSide(color: AppColors.oceanBlue),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                    );
-                  },
-                ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => DeliveryRouteMapScreen(order: order),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               )
             else if (order.orderType == 'pickup')
               SizedBox(

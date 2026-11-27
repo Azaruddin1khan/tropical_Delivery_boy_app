@@ -44,6 +44,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       facing: CameraFacing.back,
       returnImage: false,
     );
+
+    if (widget.targetOrderCode != null && widget.targetOrderCode!.isNotEmpty) {
+      _manualInputController.text = widget.targetOrderCode!;
+    }
   }
 
   @override
@@ -236,8 +240,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     if (_isProcessingScan) return;
     final state = StaffStateScope.read(context);
     DeliveryOrder? order;
-    if (sampleCode != null && sampleCode.isNotEmpty) {
-      order = state.findOrderByCode(sampleCode);
+    final codeToLookup = sampleCode ?? widget.targetOrderCode;
+    if (codeToLookup != null && codeToLookup.isNotEmpty) {
+      order = state.findOrderByCode(codeToLookup);
     }
 
     if (order == null) {
@@ -276,7 +281,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       return;
     }
 
-    _showScanResultBottomSheet(context, order);
+    _validateAndShowScanResult(
+      context,
+      order,
+      codeToLookup ??
+          (order.status == DeliveryOrderStatus.outForDelivery
+              ? order.customerDropCode
+              : order.barcodeCode),
+    );
   }
 
   void _handleManualLookup(BuildContext _) async {
@@ -684,6 +696,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                               backgroundColor: AppColors.limeGreenDark,
                             ),
                           );
+                          if (Navigator.of(context).canPop()) {
+                            Navigator.of(context).pop();
+                          }
                         }
                       },
                       child: Text(
@@ -734,10 +749,23 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Flexible(
+                      if (Navigator.of(context).canPop()) ...[
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Flexible(
                         child: Text(
-                          'Scan Customer Order Barcode / QR',
-                          style: TextStyle(
+                          widget.targetOrderCode != null
+                              ? 'Scan Pass: ${widget.targetOrderCode}'
+                              : 'Scan Customer Order Barcode / QR',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -777,6 +805,34 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 ],
               ),
             ),
+
+            if (widget.targetOrderCode != null &&
+                widget.targetOrderCode!.isNotEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: AppColors.oceanBlueLight,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.qr_code_scanner_rounded,
+                      size: 18,
+                      color: AppColors.oceanBlueDark,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Target Pass: ${widget.targetOrderCode} • Point camera at customer phone pass',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.oceanBlueDark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             // Live Camera Viewfinder + Scanning Laser Bar Overlay
             Expanded(
