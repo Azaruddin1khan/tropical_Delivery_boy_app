@@ -164,7 +164,9 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
   }
 
   void _showManualCodeEntryDialog(BuildContext context) {
-    final textController = TextEditingController(text: widget.order.customerDropCode);
+    final textController = TextEditingController(
+      text: widget.order.customerDropCode,
+    );
     bool isSubmitting = false;
     String? errorMessage;
 
@@ -173,12 +175,17 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: const Row(
               children: [
                 Icon(Icons.pin_rounded, color: AppColors.oceanBlue),
                 SizedBox(width: 8),
-                Text('Enter Drop Code', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                Text(
+                  'Enter Drop Code',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             content: Column(
@@ -187,7 +194,10 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
               children: [
                 const Text(
                   'Ask the customer for their Delivery Pass code (from customer app "View Delivery Pass"):',
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -198,7 +208,9 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                     labelText: 'Drop Pass Code',
                     hintText: 'e.g. DROP-${widget.order.id}',
                     prefixIcon: const Icon(Icons.qr_code_rounded),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     errorText: errorMessage,
                   ),
                 ),
@@ -215,11 +227,18 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                       children: [
                         const Text(
                           'Cash to Collect (COD):',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.warningOrange),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.warningOrange,
+                          ),
                         ),
                         Text(
                           '${AppConstants.currency}${widget.order.totalAmount.toStringAsFixed(2)}',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ],
                     ),
@@ -236,14 +255,20 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.limeGreen,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 onPressed: isSubmitting
                     ? null
                     : () async {
-                        final inputCode = textController.text.trim().toUpperCase();
+                        final inputCode = textController.text
+                            .trim()
+                            .toUpperCase();
                         if (inputCode.isEmpty) {
-                          setDialogState(() => errorMessage = 'Please enter a code');
+                          setDialogState(
+                            () => errorMessage = 'Please enter a code',
+                          );
                           return;
                         }
                         setDialogState(() {
@@ -257,7 +282,8 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                         final state = StaffStateScope.read(context);
 
                         try {
-                          final verifiedOrder = await state.findOrderByCodeOrFetch(inputCode);
+                          final verifiedOrder = await state
+                              .findOrderByCodeOrFetch(inputCode);
                           if (verifiedOrder == null) {
                             setDialogState(() {
                               isSubmitting = false;
@@ -269,13 +295,15 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                           if (verifiedOrder.id != widget.order.id) {
                             setDialogState(() {
                               isSubmitting = false;
-                              errorMessage = 'This code is for a different order (#${verifiedOrder.id}).';
+                              errorMessage =
+                                  'This code is for a different order (#${verifiedOrder.id}).';
                             });
                             return;
                           }
 
                           // Check if Kitchen Bag code was entered by mistake
-                          final isKitchenBagCode = inputCode.startsWith('KB') ||
+                          final isKitchenBagCode =
+                              inputCode.startsWith('KB') ||
                               inputCode.contains('KB-') ||
                               inputCode.contains('/KITCHEN');
                           if (isKitchenBagCode) {
@@ -295,7 +323,9 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                           }
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text('Order #${widget.order.id} verified and marked Delivered! 🎉'),
+                              content: Text(
+                                'Order #${widget.order.id} verified and marked Delivered! 🎉',
+                              ),
                               backgroundColor: AppColors.limeGreenDark,
                             ),
                           );
@@ -312,7 +342,14 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                         }
                       },
                 child: isSubmitting
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Text('Verify & Deliver'),
               ),
             ],
@@ -888,7 +925,10 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
+                          icon: const Icon(
+                            Icons.qr_code_scanner_rounded,
+                            size: 20,
+                          ),
                           label: const Text(
                             'Scan Customer Drop Pass',
                             style: TextStyle(
@@ -909,7 +949,8 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => BarcodeScannerScreen(
-                                  targetOrderCode: widget.order.customerDropCode,
+                                  targetOrderCode:
+                                      widget.order.customerDropCode,
                                 ),
                               ),
                             );
@@ -922,7 +963,10 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
-                          icon: const Icon(Icons.keyboard_alt_rounded, size: 18),
+                          icon: const Icon(
+                            Icons.keyboard_alt_rounded,
+                            size: 18,
+                          ),
                           label: const Text(
                             'Enter Drop Code Manually',
                             style: TextStyle(

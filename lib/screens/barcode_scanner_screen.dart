@@ -3,7 +3,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
-import '../core/widgets/demo_banner.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_app_state.dart';
 import '../state/staff_state_scope.dart';
@@ -231,64 +230,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         badgeColor: AppColors.errorRed,
       );
     }
-  }
-
-  void _onSimulateScan(
-    BuildContext context, {
-    String? sampleCode,
-  }) {
-    if (_isProcessingScan) return;
-    final state = StaffStateScope.read(context);
-    DeliveryOrder? order;
-    final codeToLookup = sampleCode ?? widget.targetOrderCode;
-    if (codeToLookup != null && codeToLookup.isNotEmpty) {
-      order = state.findOrderByCode(codeToLookup);
-    }
-
-    if (order == null) {
-      // First prioritize assigned delivery orders (kitchen bag pickup)
-      final assignedDelivery = state.assignedOrders
-          .where(
-            (o) =>
-                o.status == DeliveryOrderStatus.assigned &&
-                o.orderType == 'delivery',
-          )
-          .firstOrNull;
-
-      // Second prioritize out for delivery orders (doorstep handover)
-      final enRouteDelivery = state.assignedOrders
-          .where((o) => o.status == DeliveryOrderStatus.outForDelivery)
-          .firstOrNull;
-
-      // Third prioritize takeout orders
-      final takeout = state.assignedOrders
-          .where((o) => o.orderType == 'pickup')
-          .firstOrNull;
-
-      order = assignedDelivery ??
-          enRouteDelivery ??
-          takeout ??
-          state.assignedOrders.firstOrNull;
-    }
-
-    if (order == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No matching active order found to scan.'),
-          backgroundColor: AppColors.errorRed,
-        ),
-      );
-      return;
-    }
-
-    _validateAndShowScanResult(
-      context,
-      order,
-      codeToLookup ??
-          (order.status == DeliveryOrderStatus.outForDelivery
-              ? order.customerDropCode
-              : order.barcodeCode),
-    );
   }
 
   void _handleManualLookup(BuildContext _) async {
@@ -728,9 +669,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
   @override
   Widget build(BuildContext context) {
-    final state = StaffStateScope.of(context);
-    final activeOrders = state.assignedOrders;
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -740,67 +678,61 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             Container(
               color: Colors.black87,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const DemoBanner(
-                    label: 'PICKUP BARCODE SCANNER • Live Camera & QR Engine',
+                  if (Navigator.of(context).canPop()) ...[
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  Flexible(
+                    child: Text(
+                      widget.targetOrderCode != null
+                          ? (widget.targetOrderCode!.toUpperCase().startsWith('KB')
+                              ? 'Scan Kitchen Bag: ${widget.targetOrderCode}'
+                              : 'Scan Drop Pass: ${widget.targetOrderCode}')
+                          : 'Scan Order Barcode / QR',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (Navigator.of(context).canPop()) ...[
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white,
-                            size: 20,
+                  IconButton(
+                    icon: Icon(
+                      _isFlashOn
+                          ? Icons.flash_on_rounded
+                          : Icons.flash_off_rounded,
+                      color: _isFlashOn
+                          ? AppColors.tropicalYellow
+                          : Colors.white70,
+                    ),
+                    onPressed: () async {
+                      setState(() => _isFlashOn = !_isFlashOn);
+                      try {
+                        await _scannerController.toggleTorch();
+                      } catch (_) {}
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              _isFlashOn
+                                  ? 'Camera Torch ON 💡'
+                                  : 'Camera Torch OFF',
+                            ),
+                            duration: const Duration(milliseconds: 700),
                           ),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      Flexible(
-                        child: Text(
-                          widget.targetOrderCode != null
-                              ? 'Scan Pass: ${widget.targetOrderCode}'
-                              : 'Scan Customer Order Barcode / QR',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          _isFlashOn
-                              ? Icons.flash_on_rounded
-                              : Icons.flash_off_rounded,
-                          color: _isFlashOn
-                              ? AppColors.tropicalYellow
-                              : Colors.white70,
-                        ),
-                        onPressed: () async {
-                          setState(() => _isFlashOn = !_isFlashOn);
-                          try {
-                            await _scannerController.toggleTorch();
-                          } catch (_) {}
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  _isFlashOn
-                                      ? 'Camera Torch ON 💡'
-                                      : 'Camera Torch OFF',
-                                ),
-                                duration: const Duration(milliseconds: 700),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    ],
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
@@ -822,7 +754,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Target Pass: ${widget.targetOrderCode} • Point camera at customer phone pass',
+                        widget.targetOrderCode!.toUpperCase().startsWith('KB')
+                            ? 'Target Bag: ${widget.targetOrderCode} • Scan Kitchen Bag barcode on parcel'
+                            : 'Target Pass: ${widget.targetOrderCode} • Point camera at customer phone pass',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -890,13 +824,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     ),
                   ),
 
-                  // 3. Viewfinder Frame with interactive Tap-to-Scan & animated laser bar
-                  GestureDetector(
-                    onTap: () => _onSimulateScan(context),
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      width: 270,
-                      height: 270,
+                  // 3. Viewfinder Frame with animated laser bar
+                  Container(
+                    width: 270,
+                    height: 270,
                       decoration: BoxDecoration(
                         color: Colors.transparent,
                         borderRadius: BorderRadius.circular(20),
@@ -1013,7 +944,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                         ],
                       ),
                     ),
-                  ),
 
                   // Prompt Text
                   Positioned(
@@ -1038,7 +968,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                           ),
                           SizedBox(width: 6),
                           Text(
-                            'Point camera at Barcode / QR (or tap frame)',
+                            'Point camera at Barcode / QR',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -1061,117 +991,49 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (activeOrders.isNotEmpty) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Quick Scan Selectors (Demo):',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        Text(
-                          '${activeOrders.length} active',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ],
+                  const Text(
+                    'Manual Code Entry',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
                     ),
-                    const SizedBox(height: 6),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (final ord in activeOrders)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ActionChip(
-                                avatar: Icon(
-                                  ord.status == DeliveryOrderStatus.assigned &&
-                                          ord.orderType == 'delivery'
-                                      ? Icons.lunch_dining_rounded
-                                      : ord.status ==
-                                              DeliveryOrderStatus.outForDelivery
-                                          ? Icons.home_rounded
-                                          : Icons.storefront_rounded,
-                                  size: 15,
-                                  color: ord.status ==
-                                              DeliveryOrderStatus.assigned &&
-                                          ord.orderType == 'delivery'
-                                      ? AppColors.limeGreenDark
-                                      : ord.status ==
-                                              DeliveryOrderStatus.outForDelivery
-                                          ? AppColors.oceanBlueDark
-                                          : AppColors.tropicalYellowDark,
-                                ),
-                                label: Text(
-                                  ord.status == DeliveryOrderStatus.assigned &&
-                                          ord.orderType == 'delivery'
-                                      ? 'Bag #${ord.id}'
-                                      : ord.status ==
-                                              DeliveryOrderStatus.outForDelivery
-                                          ? 'Doorstep #${ord.id}'
-                                          : 'Takeout #${ord.id}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                backgroundColor: ord.status ==
-                                            DeliveryOrderStatus.assigned &&
-                                        ord.orderType == 'delivery'
-                                    ? AppColors.limeGreenLight
-                                    : ord.status ==
-                                            DeliveryOrderStatus.outForDelivery
-                                        ? AppColors.oceanBlueLight
-                                        : AppColors.tropicalYellowLight,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                onPressed: () => _onSimulateScan(
-                                  context,
-                                  sampleCode: ord.barcodeCode,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-
-
-                  // Manual ID Entry
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
                         child: TextField(
                           controller: _manualInputController,
                           textCapitalization: TextCapitalization.characters,
-                          decoration: const InputDecoration(
-                            hintText: 'Or enter Order ID (e.g. TG-8095)',
+                          decoration: InputDecoration(
+                            hintText: widget.targetOrderCode != null
+                                ? 'e.g. ${widget.targetOrderCode}'
+                                : 'Enter Order ID or Barcode',
                             isDense: true,
-                            contentPadding: EdgeInsets.symmetric(
+                            prefixIcon: const Icon(Icons.qr_code_rounded, size: 18),
+                            contentPadding: const EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: AppColors.border),
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.oceanBlue,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
+                            horizontal: 18,
                             vertical: 12,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         onPressed: () => _handleManualLookup(context),
