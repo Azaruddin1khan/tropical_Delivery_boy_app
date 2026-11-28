@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
-import '../core/widgets/demo_banner.dart';
 import '../core/widgets/primary_button.dart';
 import '../models/staff_user.dart';
 import '../state/staff_state_scope.dart';
@@ -99,9 +98,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const DemoBanner(
-                    label: 'STAFF PORTAL • Live Backend API Connected',
-                  ),
                   const SizedBox(height: 16),
 
                   // Official Brand Logo

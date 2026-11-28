@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
-import '../core/widgets/demo_banner.dart';
 import '../core/widgets/primary_button.dart';
 import '../core/widgets/status_chip.dart';
 import '../models/delivery_order.dart';
@@ -231,11 +230,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const DemoBanner(
-                      label: 'LOCAL DEMO STATE • Actions update in-memory state only',
-                    ),
-                    const SizedBox(height: 8),
-
                     // Destination / Customer Card
                     Container(
                       padding: const EdgeInsets.all(16),

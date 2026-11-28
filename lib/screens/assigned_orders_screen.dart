@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
-import '../core/widgets/demo_banner.dart';
 import '../core/widgets/empty_state.dart';
 import '../core/widgets/status_chip.dart';
 import '../models/delivery_order.dart';
@@ -46,9 +45,6 @@ class _AssignedOrdersScreenState extends State<AssignedOrdersScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Column(
                 children: [
-                  const DemoBanner(
-                    label: 'ASSIGNED DELIVERIES • Tap any order to process actions',
-                  ),
                   // Filter Chips
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,

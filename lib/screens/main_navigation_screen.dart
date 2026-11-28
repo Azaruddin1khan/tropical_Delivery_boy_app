@@ -137,18 +137,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(
-                  Icons.refresh_rounded,
-                  color: AppColors.textDark,
+                  Icons.sync_rounded,
+                  color: AppColors.oceanBlue,
                 ),
-                title: const Text('Reset Mock Data to Initial State'),
-                subtitle: const Text('Restores 3 active orders & history'),
+                title: const Text('Sync Orders with Server'),
+                subtitle: const Text('Refresh active assigned orders & history'),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
-                  state.resetMockData();
+                  state.refreshOrders();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        'Mock order data has been reset to defaults!',
+                        'Orders synchronized with live server!',
                       ),
                       backgroundColor: AppColors.limeGreenDark,
                     ),
@@ -273,7 +273,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               Icons.qr_code_scanner_rounded,
               color: AppColors.oceanBlue,
             ),
-            label: 'Scan Pickup',
+            label: 'Scan Order',
           ),
           const NavigationDestination(
             icon: Icon(Icons.history_rounded),

@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
-import '../core/widgets/demo_banner.dart';
 import '../core/widgets/empty_state.dart';
 import '../core/widgets/status_chip.dart';
 import '../models/delivery_order.dart';
@@ -28,9 +27,6 @@ class DeliveryHistoryScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Column(
                 children: [
-                  const DemoBanner(
-                    label: 'DELIVERY HISTORY • Completed Orders Archive (Mock)',
-                  ),
                   // Summary Banner
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -113,24 +109,33 @@ class DeliveryHistoryScreen extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: history.isEmpty
-                  ? const EmptyState(
-                      icon: Icons.history_rounded,
-                      title: 'No Completed Deliveries Yet',
-                      message: 'Orders that you complete or hand over at the counter will appear here.',
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+              child: RefreshIndicator(
+                onRefresh: () => state.refreshOrders(),
+                color: AppColors.limeGreenDark,
+                child: history.isEmpty
+                    ? ListView(
+                        children: const [
+                          SizedBox(height: 60),
+                          EmptyState(
+                            icon: Icons.history_rounded,
+                            title: 'No Completed Deliveries Yet',
+                            message: 'Orders that you complete or hand over at the counter will appear here in real time.',
+                          ),
+                        ],
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        itemCount: history.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final order = history[index];
+                          return _buildHistoryCard(context, order);
+                        },
                       ),
-                      itemCount: history.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final order = history[index];
-                        return _buildHistoryCard(context, order);
-                      },
-                    ),
+              ),
             ),
           ],
         ),
