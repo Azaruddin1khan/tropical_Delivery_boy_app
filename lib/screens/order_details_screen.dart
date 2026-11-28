@@ -23,108 +23,278 @@ class OrderDetailsScreen extends StatefulWidget {
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   bool _isProcessing = false;
 
-  void _handleMarkCashReceived(DeliveryOrder order) {
-    showDialog(
+  Future<String?> _showPaymentMethodDialog(
+    BuildContext context,
+    double amount,
+  ) {
+    String selected = 'cash';
+    return showDialog<String>(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: const Text('Confirm Cash Collection'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Did you receive cash from the customer for this order?',
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.tropicalYellowLight,
-                borderRadius: BorderRadius.circular(10),
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.point_of_sale_rounded, color: AppColors.oceanBlue),
+              SizedBox(width: 8),
+              Text(
+                'Doorstep Payment',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Exact Cash Due:',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    '${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.tropicalYellowDark,
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.tropicalYellowLight,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Amount to Collect:',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                    Text(
+                      '${AppConstants.currency}${amount.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.tropicalYellowDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Select payment method received from customer:',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // 1. Cash option
+              InkWell(
+                onTap: () => setDialogState(() => selected = 'cash'),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: selected == 'cash' ? const Color(0xFFECFDF5) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: selected == 'cash' ? AppColors.limeGreen : const Color(0xFFCBD5E1),
+                      width: selected == 'cash' ? 2 : 1,
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Note: This updates local demo state only. No real bank or accounting server is affected.',
-              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.limeGreen,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(dialogCtx).pop();
-              final state = StaffStateScope.read(context);
-              state.markCashReceived(order.id);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Cash payment of ${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)} marked as received! 💵',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.payments_rounded, color: Color(0xFF059669), size: 22),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Cash (Remit at Store)',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                            ),
+                            Text(
+                              'Physical cash collected',
+                              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: selected == 'cash'
+                                ? AppColors.limeGreenDark
+                                : const Color(0xFF94A3B8),
+                            width: selected == 'cash' ? 6 : 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  backgroundColor: AppColors.limeGreenDark,
                 ),
-              );
-            },
-            child: const Text('Confirm Cash Received'),
-          ),
-        ],
-      ),
-    );
-  }
+              ),
 
-  void _handleConfirmDelivered(DeliveryOrder order) async {
-    // If order is COD and cash has NOT been marked received yet, give prompt
-    if (order.requiresCashCollection) {
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (dialogCtx) => AlertDialog(
-          title: const Text('⚠️ Pending Cash Collection'),
-          content: Text(
-            'This order requires collecting ${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)} in cash.\n\nWould you like to mark cash as collected and finish delivery?',
+              // 2. Credit Card (POS)
+              InkWell(
+                onTap: () => setDialogState(() => selected = 'credit_card'),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: selected == 'credit_card' ? const Color(0xFFEFF6FF) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: selected == 'credit_card' ? AppColors.oceanBlue : const Color(0xFFCBD5E1),
+                      width: selected == 'credit_card' ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.credit_card_rounded, color: AppColors.oceanBlue, size: 22),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Credit Card (POS Machine)',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                            ),
+                            Text(
+                              'Charged on card machine',
+                              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: selected == 'credit_card'
+                                ? AppColors.oceanBlue
+                                : const Color(0xFF94A3B8),
+                            width: selected == 'credit_card' ? 6 : 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 3. Debit Card (POS)
+              InkWell(
+                onTap: () => setDialogState(() => selected = 'debit_card'),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: selected == 'debit_card' ? const Color(0xFFF5F3FF) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: selected == 'debit_card' ? const Color(0xFF7C3AED) : const Color(0xFFCBD5E1),
+                      width: selected == 'debit_card' ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.credit_score_rounded, color: Color(0xFF7C3AED), size: 22),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Debit Card (POS Machine)',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                            ),
+                            Text(
+                              'Charged on card machine',
+                              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: selected == 'debit_card'
+                                ? const Color(0xFF7C3AED)
+                                : const Color(0xFF94A3B8),
+                            width: selected == 'debit_card' ? 6 : 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              onPressed: () => Navigator.of(dialogCtx).pop(null),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.limeGreen,
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              onPressed: () => Navigator.of(dialogCtx).pop(true),
-              child: const Text('Collect Cash & Complete'),
+              onPressed: () => Navigator.of(dialogCtx).pop(selected),
+              child: const Text('Confirm Payment'),
             ),
           ],
         ),
-      );
+      ),
+    );
+  }
 
-      if (proceed != true) return;
+  void _handleMarkCashReceived(DeliveryOrder order) async {
+    final chosenMethod = await _showPaymentMethodDialog(
+      context,
+      order.totalAmount,
+    );
+    if (chosenMethod == null || !mounted) return;
+
+    final state = StaffStateScope.read(context);
+    state.markCashReceived(order.id, paymentMethod: chosenMethod);
+
+    final methodLabel = chosenMethod == 'credit_card'
+        ? 'Credit Card (POS)'
+        : (chosenMethod == 'debit_card' ? 'Debit Card (POS)' : 'Cash');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Payment of ${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)} recorded via $methodLabel! 💵💳',
+        ),
+        backgroundColor: AppColors.limeGreenDark,
+      ),
+    );
+  }
+
+  void _handleConfirmDelivered(DeliveryOrder order) async {
+    String? chosenMethod;
+    // If order is COD and payment has NOT been marked received yet, prompt for payment method
+    if (order.requiresCashCollection) {
+      chosenMethod = await _showPaymentMethodDialog(
+        context,
+        order.totalAmount,
+      );
+      if (chosenMethod == null) return;
     }
 
     if (!mounted) return;
@@ -138,7 +308,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     if (order.orderType == 'pickup') {
       state.markOrderPickedUp(order.id);
     } else {
-      state.markOrderDelivered(order.id);
+      state.markOrderDelivered(order.id, paymentMethod: chosenMethod);
     }
 
     setState(() => _isProcessing = false);
@@ -577,7 +747,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    order.paymentMethod,
+                                    order.paymentMethodDisplay,
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
@@ -599,7 +769,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                           if (order.requiresCashCollection && !isDelivered) ...[
                             const SizedBox(height: 12),
                             const Text(
-                              'Action Required: Collect cash payment upon arrival at customer address.',
+                              'Action Required: Collect payment (Cash or POS Card Machine) upon arrival at customer address.',
                               style: TextStyle(
                                 fontSize: 13,
                                 color: AppColors.textDark,
@@ -608,8 +778,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             const SizedBox(height: 10),
                             PrimaryButton(
                               text:
-                                  'Mark Cash Received (${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)})',
-                              icon: Icons.check_circle_outline_rounded,
+                                  'Record Doorstep Payment (${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)})',
+                              icon: Icons.point_of_sale_rounded,
                               variant: ButtonVariant.success,
                               width: double.infinity,
                               onPressed: () => _handleMarkCashReceived(order),

@@ -32,6 +32,7 @@ class DeliveryOrder {
   final DateTime? deliveredAt;
   final String? assignedDriverId;
   final String? assignedDriverName;
+  final String? paymentCollectedMethod; // 'cash', 'credit_card', 'debit_card'
 
   const DeliveryOrder({
     required this.id,
@@ -54,6 +55,7 @@ class DeliveryOrder {
     this.deliveredAt,
     this.assignedDriverId,
     this.assignedDriverName,
+    this.paymentCollectedMethod,
   });
 
   bool get isCashOnDelivery =>
@@ -65,6 +67,22 @@ class DeliveryOrder {
   bool get requiresCashCollection => !isPaid;
 
   int get totalItemCount => items.fold(0, (sum, item) => sum + item.quantity);
+
+  String get paymentMethodDisplay {
+    if (paymentCollectedMethod == 'credit_card' ||
+        paymentMethod.toLowerCase().contains('credit')) {
+      return 'COD • Credit Card (POS)';
+    }
+    if (paymentCollectedMethod == 'debit_card' ||
+        paymentMethod.toLowerCase().contains('debit')) {
+      return 'COD • Debit Card (POS)';
+    }
+    if (paymentCollectedMethod == 'cash' ||
+        paymentMethod.toLowerCase().contains('cash')) {
+      return 'COD • Cash';
+    }
+    return paymentMethod;
+  }
 
   DeliveryOrder copyWith({
     String? id,
@@ -87,6 +105,7 @@ class DeliveryOrder {
     DateTime? deliveredAt,
     String? assignedDriverId,
     String? assignedDriverName,
+    String? paymentCollectedMethod,
   }) {
     return DeliveryOrder(
       id: id ?? this.id,
@@ -109,6 +128,8 @@ class DeliveryOrder {
       deliveredAt: deliveredAt ?? this.deliveredAt,
       assignedDriverId: assignedDriverId ?? this.assignedDriverId,
       assignedDriverName: assignedDriverName ?? this.assignedDriverName,
+      paymentCollectedMethod:
+          paymentCollectedMethod ?? this.paymentCollectedMethod,
     );
   }
 
@@ -173,6 +194,8 @@ class DeliveryOrder {
           : null,
       assignedDriverId: json['assignedDriverId'] as String?,
       assignedDriverName: json['assignedDriverName'] as String?,
+      paymentCollectedMethod: json['paymentCollectedMethod'] as String? ??
+          json['collectedPaymentMethod'] as String?,
     );
   }
 
@@ -197,5 +220,7 @@ class DeliveryOrder {
     if (deliveredAt != null) 'deliveredAt': deliveredAt!.toIso8601String(),
     if (assignedDriverId != null) 'assignedDriverId': assignedDriverId,
     if (assignedDriverName != null) 'assignedDriverName': assignedDriverName,
+    if (paymentCollectedMethod != null)
+      'paymentCollectedMethod': paymentCollectedMethod,
   };
 }

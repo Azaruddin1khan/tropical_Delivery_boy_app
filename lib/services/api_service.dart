@@ -272,6 +272,7 @@ class DeliveryApiService {
     required String orderId,
     required String status,
     String? driverId,
+    String? paymentCollectedMethod,
   }) async {
     try {
       final base = await getBaseUrl();
@@ -280,7 +281,11 @@ class DeliveryApiService {
           .patch(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'status': status, 'driverId': driverId}),
+            body: jsonEncode({
+              'status': status,
+              'driverId': driverId,
+              'paymentCollectedMethod': ?paymentCollectedMethod,
+            }),
           )
           .timeout(const Duration(seconds: 4));
 
@@ -295,6 +300,7 @@ class DeliveryApiService {
     required String orderId,
     required double amount,
     String? driverId,
+    String paymentMethod = 'cash',
   }) async {
     try {
       final base = await getBaseUrl();
@@ -303,7 +309,11 @@ class DeliveryApiService {
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'amount': amount, 'driverId': driverId}),
+            body: jsonEncode({
+              'amount': amount,
+              'driverId': driverId,
+              'paymentCollectedMethod': paymentMethod,
+            }),
           )
           .timeout(const Duration(seconds: 4));
 

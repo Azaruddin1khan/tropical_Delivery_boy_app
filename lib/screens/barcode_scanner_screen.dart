@@ -434,8 +434,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     final isDropAction =
         forceDropHandover || order.status == DeliveryOrderStatus.outForDelivery;
 
-    // Track COD cash checkbox inside the modal
-    bool isCashCollected = !order.requiresCashCollection;
+    // Track Doorstep COD payment mode: 'cash', 'credit_card', 'debit_card'
+    String selectedPaymentMethod = 'cash';
+    bool isPaymentConfirmed = !order.requiresCashCollection;
 
     showModalBottomSheet(
       context: context,
@@ -655,41 +656,291 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   ),
                 ),
 
-                // COD Cash Collection Confirmation Checkbox
+                // COD Payment Collection Selector (Cash / POS Card Machine)
                 if (isDropAction && order.requiresCashCollection) ...[
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: () {
-                      setSheetState(() {
-                        isCashCollected = !isCashCollected;
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(10),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Checkbox(
-                            value: isCashCollected,
-                            activeColor: AppColors.limeGreenDark,
-                            onChanged: (val) {
-                              setSheetState(() {
-                                isCashCollected = val ?? false;
-                              });
-                            },
-                          ),
-                          Expanded(
-                            child: Text(
-                              'I have collected ${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)} cash from customer',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textDark,
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.point_of_sale_rounded,
+                                  size: 16,
+                                  color: AppColors.oceanBlue,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Doorstep Payment Collection:',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.tropicalYellowLight,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${AppConstants.currency}${order.totalAmount.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.tropicalYellowDark,
+                                ),
                               ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Select payment method received from customer:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // 3 Payment Mode Buttons: Cash, Credit Card, Debit Card
+                        Row(
+                          children: [
+                            // 1. Cash Option
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  setSheetState(() {
+                                    selectedPaymentMethod = 'cash';
+                                    isPaymentConfirmed = true;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 9,
+                                    horizontal: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: selectedPaymentMethod == 'cash'
+                                        ? const Color(0xFFECFDF5)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: selectedPaymentMethod == 'cash'
+                                          ? AppColors.limeGreen
+                                          : const Color(0xFFCBD5E1),
+                                      width: selectedPaymentMethod == 'cash'
+                                          ? 2
+                                          : 1,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.payments_rounded,
+                                        size: 20,
+                                        color: selectedPaymentMethod == 'cash'
+                                            ? const Color(0xFF059669)
+                                            : AppColors.textSecondary,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Cash',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: selectedPaymentMethod == 'cash'
+                                              ? const Color(0xFF065F46)
+                                              : AppColors.textDark,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            // 2. Credit Card (POS Machine)
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  setSheetState(() {
+                                    selectedPaymentMethod = 'credit_card';
+                                    isPaymentConfirmed = true;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 9,
+                                    horizontal: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        selectedPaymentMethod == 'credit_card'
+                                        ? const Color(0xFFEFF6FF)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color:
+                                          selectedPaymentMethod == 'credit_card'
+                                          ? AppColors.oceanBlue
+                                          : const Color(0xFFCBD5E1),
+                                      width:
+                                          selectedPaymentMethod == 'credit_card'
+                                          ? 2
+                                          : 1,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.credit_card_rounded,
+                                        size: 20,
+                                        color:
+                                            selectedPaymentMethod ==
+                                                'credit_card'
+                                            ? AppColors.oceanBlue
+                                            : AppColors.textSecondary,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Credit Card',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              selectedPaymentMethod ==
+                                                  'credit_card'
+                                              ? AppColors.oceanBlueDark
+                                              : AppColors.textDark,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            // 3. Debit Card (POS Machine)
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  setSheetState(() {
+                                    selectedPaymentMethod = 'debit_card';
+                                    isPaymentConfirmed = true;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 9,
+                                    horizontal: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: selectedPaymentMethod == 'debit_card'
+                                        ? const Color(0xFFF5F3FF)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color:
+                                          selectedPaymentMethod == 'debit_card'
+                                          ? const Color(0xFF7C3AED)
+                                          : const Color(0xFFCBD5E1),
+                                      width:
+                                          selectedPaymentMethod == 'debit_card'
+                                          ? 2
+                                          : 1,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.credit_score_rounded,
+                                        size: 20,
+                                        color:
+                                            selectedPaymentMethod ==
+                                                'debit_card'
+                                            ? const Color(0xFF7C3AED)
+                                            : AppColors.textSecondary,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Debit Card',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              selectedPaymentMethod ==
+                                                  'debit_card'
+                                              ? const Color(0xFF5B21B6)
+                                              : AppColors.textDark,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 8),
+                        // Confirmation indicator
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              size: 14,
+                              color: selectedPaymentMethod == 'cash'
+                                  ? const Color(0xFF059669)
+                                  : (selectedPaymentMethod == 'credit_card'
+                                      ? AppColors.oceanBlue
+                                      : const Color(0xFF7C3AED)),
+                            ),
+                            const SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                selectedPaymentMethod == 'cash'
+                                    ? 'Cash in hand to remit at store'
+                                    : (selectedPaymentMethod == 'credit_card'
+                                        ? 'Charged via Card Machine (Credit Card)'
+                                        : 'Charged via Card Machine (Debit Card)'),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: selectedPaymentMethod == 'cash'
+                                      ? const Color(0xFF059669)
+                                      : (selectedPaymentMethod == 'credit_card'
+                                          ? AppColors.oceanBlue
+                                          : const Color(0xFF7C3AED)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -725,7 +976,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isPickupAction
                               ? AppColors.limeGreen // Green for Pickup
-                              : (isDropAction && !isCashCollected
+                              : (isDropAction && !isPaymentConfirmed
                                     ? Colors.grey
                                     : AppColors.oceanBlue), // Sky Blue for Drop
                           foregroundColor: Colors.white,
@@ -734,7 +985,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: (isDropAction && !isCashCollected)
+                        onPressed: (isDropAction && !isPaymentConfirmed)
                             ? null
                             : () {
                                 Navigator.of(bottomSheetContext).pop();
@@ -779,11 +1030,27 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                                     ),
                                   );
                                 } else {
-                                  state.markOrderDelivered(order.id);
+                                  final methodToRecord =
+                                      (isDropAction &&
+                                          order.requiresCashCollection)
+                                      ? selectedPaymentMethod
+                                      : null;
+                                  state.markOrderDelivered(
+                                    order.id,
+                                    paymentMethod: methodToRecord,
+                                  );
+                                  final methodLabel =
+                                      selectedPaymentMethod == 'credit_card'
+                                      ? 'Credit Card (POS)'
+                                      : (selectedPaymentMethod == 'debit_card'
+                                          ? 'Debit Card (POS)'
+                                          : 'Cash');
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        'Order #${order.id} delivered to ${order.customerName}! 🎉',
+                                        order.requiresCashCollection
+                                            ? 'Order #${order.id} delivered! Payment received via $methodLabel 🎉'
+                                            : 'Order #${order.id} delivered to ${order.customerName}! 🎉',
                                       ),
                                       backgroundColor: AppColors.limeGreenDark,
                                     ),

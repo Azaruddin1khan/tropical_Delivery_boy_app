@@ -254,11 +254,22 @@ class StaffAppState extends ChangeNotifier {
     }
   }
 
-  void markCashReceived(String orderId) {
+  void markCashReceived(String orderId, {String paymentMethod = 'cash'}) {
     final index = _assignedOrders.indexWhere((o) => o.id == orderId);
     if (index != -1) {
       final order = _assignedOrders[index];
-      final updated = order.copyWith(isPaid: true);
+      String displayMethod = 'COD - Cash';
+      if (paymentMethod == 'credit_card') {
+        displayMethod = 'COD - Credit Card (POS)';
+      } else if (paymentMethod == 'debit_card') {
+        displayMethod = 'COD - Debit Card (POS)';
+      }
+
+      final updated = order.copyWith(
+        isPaid: true,
+        paymentCollectedMethod: paymentMethod,
+        paymentMethod: displayMethod,
+      );
       _assignedOrders[index] = updated;
       notifyListeners();
 
@@ -266,18 +277,36 @@ class StaffAppState extends ChangeNotifier {
         orderId: orderId,
         amount: order.totalAmount,
         driverId: _currentUser?.id,
+        paymentMethod: paymentMethod,
       );
     }
   }
 
-  void markOrderDelivered(String orderId) {
+  void markOrderDelivered(String orderId, {String? paymentMethod}) {
     final index = _assignedOrders.indexWhere((o) => o.id == orderId);
     if (index != -1) {
       final order = _assignedOrders[index];
+      final effectivePaymentMethod =
+          paymentMethod ??
+          order.paymentCollectedMethod ??
+          (order.requiresCashCollection ? 'cash' : null);
+
+      String displayMethod = order.paymentMethod;
+      if (effectivePaymentMethod == 'credit_card') {
+        displayMethod = 'COD - Credit Card (POS)';
+      } else if (effectivePaymentMethod == 'debit_card') {
+        displayMethod = 'COD - Debit Card (POS)';
+      } else if (effectivePaymentMethod == 'cash' &&
+          order.requiresCashCollection) {
+        displayMethod = 'COD - Cash';
+      }
+
       final completed = order.copyWith(
         status: DeliveryOrderStatus.delivered,
         isPaid: true, // If cash wasn't marked before, finishing delivery confirms collection
         deliveredAt: DateTime.now(),
+        paymentCollectedMethod: effectivePaymentMethod,
+        paymentMethod: displayMethod,
       );
       _assignedOrders.removeAt(index);
       _deliveryHistory.insert(0, completed);
@@ -287,12 +316,14 @@ class StaffAppState extends ChangeNotifier {
         orderId: orderId,
         status: 'delivered',
         driverId: _currentUser?.id,
+        paymentCollectedMethod: effectivePaymentMethod,
       );
       if (order.isCashOnDelivery && !order.isPaid) {
         DeliveryApiService.markCashCollected(
           orderId: orderId,
           amount: order.totalAmount,
           driverId: _currentUser?.id,
+          paymentMethod: effectivePaymentMethod ?? 'cash',
         );
       }
     }
