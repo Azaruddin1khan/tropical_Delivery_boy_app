@@ -22,7 +22,7 @@ class BarcodeScannerScreen extends StatefulWidget {
 }
 
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _animController;
   late final MobileScannerController _scannerController;
   final _manualInputController = TextEditingController();
@@ -43,6 +43,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _animController = AnimationController(
       vsync: this,
@@ -58,7 +59,29 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _scannerController.start().catchError((_) {});
+    } else if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      _scannerController.stop().catchError((_) {});
+    }
+  }
+
+  Future<void> _restartCamera() async {
+    try {
+      await _scannerController.stop();
+      await Future.delayed(const Duration(milliseconds: 250));
+      await _scannerController.start();
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('Restart camera error: $e');
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animController.dispose();
     _scannerController.dispose();
     _manualInputController.dispose();
@@ -837,6 +860,15 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     ),
                   ),
                   IconButton(
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                      color: Colors.white70,
+                      size: 22,
+                    ),
+                    tooltip: 'Reconnect Camera',
+                    onPressed: _restartCamera,
+                  ),
+                  IconButton(
                     icon: Icon(
                       _isFlashOn
                           ? Icons.flash_on_rounded
@@ -911,6 +943,86 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     child: MobileScanner(
                       controller: _scannerController,
                       fit: BoxFit.cover,
+                      placeholderBuilder: (context) {
+                        return Container(
+                          color: Colors.black,
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 32,
+                                height: 32,
+                                child: CircularProgressIndicator(
+                                  color: themeColor,
+                                  strokeWidth: 2.5,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Starting camera engine...',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error) {
+                        return Container(
+                          color: Colors.black,
+                          padding: const EdgeInsets.all(24),
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.videocam_off_rounded,
+                                color: themeColor,
+                                size: 44,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Camera Stream Paused',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Tap below to restart the camera engine.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: themeColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.refresh_rounded, size: 18),
+                                label: const Text('Restart Camera'),
+                                onPressed: _restartCamera,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                       onDetect: (capture) {
                         for (final barcode in capture.barcodes) {
                           final val = barcode.rawValue;
@@ -919,31 +1031,6 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                             break;
                           }
                         }
-                      },
-                      errorBuilder: (context, error) {
-                        return Container(
-                          color: Colors.black,
-                          alignment: Alignment.center,
-                          child: const Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.camera_alt_outlined,
-                                color: Colors.white38,
-                                size: 48,
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Camera Ready\nAlign Barcode or QR code inside frame',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
                       },
                     ),
                   ),

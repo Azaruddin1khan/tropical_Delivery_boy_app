@@ -17,11 +17,20 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    AssignedOrdersScreen(),
-    BarcodeScannerScreen(),
-    DeliveryHistoryScreen(),
-  ];
+  Widget _buildCurrentBody() {
+    if (_currentIndex == 1) {
+      return const BarcodeScannerScreen(
+        key: ValueKey('active_tab_scanner'),
+      );
+    }
+    return IndexedStack(
+      index: _currentIndex == 2 ? 1 : 0,
+      children: const [
+        AssignedOrdersScreen(),
+        DeliveryHistoryScreen(),
+      ],
+    );
+  }
 
   void _confirmLogout(BuildContext context) {
     showDialog(
@@ -237,7 +246,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: _buildCurrentBody(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
