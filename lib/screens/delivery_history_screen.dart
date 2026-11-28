@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/empty_state.dart';
+import '../core/widgets/shimmer_loading.dart';
 import '../core/widgets/status_chip.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_state_scope.dart';
@@ -112,29 +113,39 @@ class DeliveryHistoryScreen extends StatelessWidget {
               child: RefreshIndicator(
                 onRefresh: () => state.refreshOrders(),
                 color: AppColors.limeGreenDark,
-                child: history.isEmpty
-                    ? ListView(
-                        children: const [
-                          SizedBox(height: 60),
-                          EmptyState(
-                            icon: Icons.history_rounded,
-                            title: 'No Completed Deliveries Yet',
-                            message: 'Orders that you complete or hand over at the counter will appear here in real time.',
-                          ),
-                        ],
-                      )
-                    : ListView.separated(
+                child: state.isLoadingOrders && history.isEmpty
+                    ? ListView.separated(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
                         ),
-                        itemCount: history.length,
+                        itemCount: 3,
                         separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final order = history[index];
-                          return _buildHistoryCard(context, order);
-                        },
-                      ),
+                        itemBuilder: (_, _) => const HistoryCardShimmer(),
+                      )
+                    : history.isEmpty
+                        ? ListView(
+                            children: const [
+                              SizedBox(height: 60),
+                              EmptyState(
+                                icon: Icons.history_rounded,
+                                title: 'No Completed Deliveries Yet',
+                                message: 'Orders that you complete or hand over at the counter will appear here in real time.',
+                              ),
+                            ],
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            itemCount: history.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final order = history[index];
+                              return _buildHistoryCard(context, order);
+                            },
+                          ),
               ),
             ),
           ],

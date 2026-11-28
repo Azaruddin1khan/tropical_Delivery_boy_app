@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../core/widgets/primary_button.dart';
+import '../core/widgets/shimmer_loading.dart';
 import '../core/widgets/status_chip.dart';
 import '../models/delivery_order.dart';
 import '../state/staff_state_scope.dart';
@@ -191,6 +192,13 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     final order = activeOrder ?? historyOrder;
 
     if (order == null) {
+      if (state.isLoadingOrders) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: AppBar(title: Text('Order #${widget.orderId}')),
+          body: const SafeArea(child: OrderDetailsShimmer()),
+        );
+      }
       return Scaffold(
         appBar: AppBar(title: const Text('Order Details')),
         body: const Center(child: Text('Order not found')),
@@ -373,21 +381,33 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                             child: OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.oceanBlue,
-                                side: const BorderSide(color: AppColors.oceanBlue, width: 1.5),
+                                side: const BorderSide(
+                                  color: AppColors.oceanBlue,
+                                  width: 1.5,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
                               ),
-                              icon: const Icon(Icons.navigation_rounded, size: 18),
+                              icon: const Icon(
+                                Icons.navigation_rounded,
+                                size: 18,
+                              ),
                               label: const Text(
                                 '🛰️ Open Live GPS Navigation Map',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
                               ),
                               onPressed: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) => DeliveryRouteMapScreen(order: order),
+                                    builder: (_) =>
+                                        DeliveryRouteMapScreen(order: order),
                                   ),
                                 );
                               },

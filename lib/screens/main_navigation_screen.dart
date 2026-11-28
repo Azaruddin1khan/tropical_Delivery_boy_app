@@ -141,15 +141,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   color: AppColors.oceanBlue,
                 ),
                 title: const Text('Sync Orders with Server'),
-                subtitle: const Text('Refresh active assigned orders & history'),
+                subtitle: const Text(
+                  'Refresh active assigned orders & history',
+                ),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   state.refreshOrders();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text(
-                        'Orders synchronized with live server!',
-                      ),
+                      content: Text('Orders synchronized with live server!'),
                       backgroundColor: AppColors.limeGreenDark,
                     ),
                   );

@@ -52,7 +52,10 @@ class _LoginScreenState extends State<LoginScreen> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(state.loginError ?? 'Incorrect email or password. Please try again.'),
+          content: Text(
+            state.loginError ??
+                'Incorrect email or password. Please try again.',
+          ),
           backgroundColor: AppColors.errorRed,
           behavior: SnackBarBehavior.floating,
         ),
@@ -272,7 +275,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                       style: TextButton.styleFrom(
                         visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
                         foregroundColor: AppColors.tropicalYellowDark,
                       ),
                       child: const Text(

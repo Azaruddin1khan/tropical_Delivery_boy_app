@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,10 +27,12 @@ class StaffAppState extends ChangeNotifier {
   Timer? _pollingTimer;
   SharedPreferences? _prefs;
   bool _isInitialized = false;
+  bool _isLoadingOrders = false;
 
   StaffUser? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null;
   bool get isInitialized => _isInitialized;
+  bool get isLoadingOrders => _isLoadingOrders;
   List<DeliveryOrder> get assignedOrders => List.unmodifiable(_assignedOrders);
   List<DeliveryOrder> get deliveryHistory =>
       List.unmodifiable(_deliveryHistory);
@@ -75,6 +78,7 @@ class StaffAppState extends ChangeNotifier {
       if (userStr != null && userStr.isNotEmpty) {
         final decoded = jsonDecode(userStr) as Map<String, dynamic>;
         _currentUser = StaffUser.fromJson(decoded);
+        _isLoadingOrders = true;
         _startPolling();
         unawaited(refreshOrders());
       }
@@ -114,20 +118,27 @@ class StaffAppState extends ChangeNotifier {
       _loginError = null;
       try {
         _prefs ??= await SharedPreferences.getInstance();
-        await _prefs?.setString(_userPrefsKey, jsonEncode(_currentUser!.toJson()));
+        await _prefs?.setString(
+          _userPrefsKey,
+          jsonEncode(_currentUser!.toJson()),
+        );
       } catch (e) {
         debugPrint('Failed to save staff session: $e');
       }
       _startPolling();
+      _isLoadingOrders = true;
       notifyListeners();
       unawaited(refreshOrders());
       return true;
     }
 
     // In unit tests or offline demo mode where server is unreachable, allow demo account
-    final isNetworkError = authResult.error?.contains('Unable to connect') == true;
+    final isNetworkError =
+        authResult.error?.contains('Unable to connect') == true;
     if (isNetworkError &&
-        (username.contains('devon') || username.contains('marco') || username.contains('tropicalgyros')) &&
+        (username.contains('devon') ||
+            username.contains('marco') ||
+            username.contains('tropicalgyros')) &&
         password == 'StaffPass2026!') {
       _currentUser = StaffUser(
         id: username.contains('marco') ? 'drv-01' : 'drv-00',
@@ -139,9 +150,13 @@ class StaffAppState extends ChangeNotifier {
       _loginError = null;
       try {
         _prefs ??= await SharedPreferences.getInstance();
-        await _prefs?.setString(_userPrefsKey, jsonEncode(_currentUser!.toJson()));
+        await _prefs?.setString(
+          _userPrefsKey,
+          jsonEncode(_currentUser!.toJson()),
+        );
       } catch (_) {}
       _startPolling();
+      _isLoadingOrders = true;
       notifyListeners();
       unawaited(refreshOrders());
       return true;
@@ -190,20 +205,28 @@ class StaffAppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refreshOrders() async {
+  Future<void> refreshOrders({bool showLoading = false}) async {
     if (_currentUser == null) return;
+    if (showLoading) {
+      _isLoadingOrders = true;
+      notifyListeners();
+    }
     try {
       final driverId = _currentUser!.id;
-      final liveAssigned =
-          await DeliveryApiService.fetchAssignedOrders(driverId);
-      final liveHistory =
-          await DeliveryApiService.fetchDeliveryHistory(driverId);
+      final liveAssigned = await DeliveryApiService.fetchAssignedOrders(
+        driverId,
+      );
+      final liveHistory = await DeliveryApiService.fetchDeliveryHistory(
+        driverId,
+      );
 
       _assignedOrders = liveAssigned;
       _deliveryHistory = liveHistory;
-      notifyListeners();
     } catch (e) {
       debugPrint('StaffAppState.refreshOrders error: $e');
+    } finally {
+      _isLoadingOrders = false;
+      notifyListeners();
     }
   }
 
@@ -349,7 +372,10 @@ class StaffAppState extends ChangeNotifier {
 
     try {
       final driverId = _currentUser?.id;
-      final result = await DeliveryApiService.verifyCodeResult(code, driverId: driverId);
+      final result = await DeliveryApiService.verifyCodeResult(
+        code,
+        driverId: driverId,
+      );
 
       if (result.isAssignedToOther) {
         throw OrderAssignmentException(
@@ -374,7 +400,8 @@ class StaffAppState extends ChangeNotifier {
           final curName = _currentUser!.name.toLowerCase();
           final ordDrvId = (remote.assignedDriverId ?? '').toLowerCase();
           final ordDrvName = (remote.assignedDriverName ?? '').toLowerCase();
-          final isMine = ordDrvId == curId ||
+          final isMine =
+              ordDrvId == curId ||
               ordDrvName.contains(curName) ||
               curName.contains(ordDrvName);
 

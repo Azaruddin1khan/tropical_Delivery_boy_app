@@ -22,10 +22,7 @@ enum ScanMode {
 class BarcodeScannerScreen extends StatefulWidget {
   final String? targetOrderCode;
 
-  const BarcodeScannerScreen({
-    super.key,
-    this.targetOrderCode,
-  });
+  const BarcodeScannerScreen({super.key, this.targetOrderCode});
 
   @override
   State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
@@ -98,7 +95,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -125,7 +125,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             const SizedBox(height: 12),
             Text(
               description,
-              style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.textDark),
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: AppColors.textDark,
+              ),
             ),
           ],
         ),
@@ -134,7 +138,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.limeGreenDark,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
@@ -150,12 +156,18 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     });
   }
 
-  bool _validateAndShowScanResult(BuildContext context, DeliveryOrder order, String rawCode) {
+  bool _validateAndShowScanResult(
+    BuildContext context,
+    DeliveryOrder order,
+    String rawCode,
+  ) {
     final upper = rawCode.toUpperCase().trim();
-    final isKitchenBagCode = upper.startsWith('KB') ||
+    final isKitchenBagCode =
+        upper.startsWith('KB') ||
         upper.contains('KB-') ||
         upper.contains('/KITCHEN');
-    final isCustomerDropCode = upper.startsWith('DROP') ||
+    final isCustomerDropCode =
+        upper.startsWith('DROP') ||
         upper.contains('DROP-') ||
         upper.contains('/DROP');
 
@@ -190,7 +202,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     // 3. Auto-Detect Mode
     if (_selectedMode == ScanMode.auto) {
       // If courier scanned a kitchen bag code, but order is already out for delivery
-      if (isKitchenBagCode && order.status == DeliveryOrderStatus.outForDelivery) {
+      if (isKitchenBagCode &&
+          order.status == DeliveryOrderStatus.outForDelivery) {
         _showCodeMismatchDialog(
           title: 'Parcel Already Picked Up!',
           description:
@@ -203,15 +216,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
     }
 
     // Determine action context
-    final isDropAction = _selectedMode == ScanMode.dropoff ||
+    final isDropAction =
+        _selectedMode == ScanMode.dropoff ||
         isCustomerDropCode ||
         order.status == DeliveryOrderStatus.outForDelivery;
 
-    _showScanResultBottomSheet(
-      context,
-      order,
-      forceDropHandover: isDropAction,
-    );
+    _showScanResultBottomSheet(context, order, forceDropHandover: isDropAction);
     return true;
   }
 
@@ -234,7 +244,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           final curName = user.name.toLowerCase();
           final ordDrvId = (order.assignedDriverId ?? '').toLowerCase();
           final ordDrvName = (order.assignedDriverName ?? '').toLowerCase();
-          final isMine = ordDrvId == curId ||
+          final isMine =
+              ordDrvId == curId ||
               ordDrvName.contains(curName) ||
               curName.contains(ordDrvName);
 
@@ -250,7 +261,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           }
         }
 
-        if (widget.targetOrderCode != null && widget.targetOrderCode!.isNotEmpty) {
+        if (widget.targetOrderCode != null &&
+            widget.targetOrderCode!.isNotEmpty) {
           final targetClean = widget.targetOrderCode!
               .toUpperCase()
               .replaceAll('KB-', '')
@@ -276,7 +288,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Scanned code "$rawCode" — no matching active order found.'),
+            content: Text(
+              'Scanned code "$rawCode" — no matching active order found.',
+            ),
             backgroundColor: AppColors.warningOrange,
             duration: const Duration(seconds: 2),
           ),
@@ -320,7 +334,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
           context: context,
           builder: (dialogCtx) => AlertDialog(
             title: const Text('Order Not Found'),
-            content: Text('No active order matched the code "$code". Please verify your entry.'),
+            content: Text(
+              'No active order matched the code "$code". Please verify your entry.',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogCtx).pop(),
@@ -340,7 +356,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         final curName = user.name.toLowerCase();
         final ordDrvId = (order.assignedDriverId ?? '').toLowerCase();
         final ordDrvName = (order.assignedDriverName ?? '').toLowerCase();
-        final isMine = ordDrvId == curId ||
+        final isMine =
+            ordDrvId == curId ||
             ordDrvName.contains(curName) ||
             curName.contains(ordDrvName);
 
@@ -356,7 +373,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         }
       }
 
-      if (widget.targetOrderCode != null && widget.targetOrderCode!.isNotEmpty) {
+      if (widget.targetOrderCode != null &&
+          widget.targetOrderCode!.isNotEmpty) {
         final targetClean = widget.targetOrderCode!
             .toUpperCase()
             .replaceAll('KB-', '')
@@ -398,12 +416,13 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
   }) {
     _isProcessingScan = true;
 
-    final isPickupAction = !forceDropHandover &&
+    final isPickupAction =
+        !forceDropHandover &&
         order.status == DeliveryOrderStatus.assigned &&
         order.orderType == 'delivery';
 
-    final isDropAction = forceDropHandover ||
-        order.status == DeliveryOrderStatus.outForDelivery;
+    final isDropAction =
+        forceDropHandover || order.status == DeliveryOrderStatus.outForDelivery;
 
     // Track COD cash checkbox inside the modal
     bool isCashCollected = !order.requiresCashCollection;
@@ -451,8 +470,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                           isPickupAction
                               ? 'Kitchen Pickup Verification'
                               : (order.orderType == 'pickup'
-                                  ? 'Counter Pickup Verification'
-                                  : 'Customer Doorstep Handover'),
+                                    ? 'Counter Pickup Verification'
+                                    : 'Customer Doorstep Handover'),
                           style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w800,
@@ -471,7 +490,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: isPickupAction
                             ? AppColors.limeGreenLight
@@ -506,7 +528,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.person_rounded, size: 16, color: AppColors.textDark),
+                          const Icon(
+                            Icons.person_rounded,
+                            size: 16,
+                            color: AppColors.textDark,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             order.customerName,
@@ -530,7 +556,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.location_on_rounded, size: 16, color: AppColors.oceanBlue),
+                          const Icon(
+                            Icons.location_on_rounded,
+                            size: 16,
+                            color: AppColors.oceanBlue,
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
@@ -559,7 +589,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
                 // Payment Banner
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: order.requiresCashCollection
                         ? AppColors.warningOrangeLight
@@ -667,7 +700,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                           Navigator.of(bottomSheetContext).pop();
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => OrderDetailsScreen(orderId: order.id),
+                              builder: (_) =>
+                                  OrderDetailsScreen(orderId: order.id),
                             ),
                           );
                         },
@@ -682,8 +716,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                           backgroundColor: isPickupAction
                               ? AppColors.limeGreen
                               : (isDropAction && !isCashCollected
-                                  ? Colors.grey
-                                  : AppColors.oceanBlue),
+                                    ? Colors.grey
+                                    : AppColors.oceanBlue),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -701,9 +735,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                                     order.id,
                                     DeliveryOrderStatus.outForDelivery,
                                   );
-                                  final updatedOrder = state.findOrderByCode(order.id) ??
+                                  final updatedOrder =
+                                      state.findOrderByCode(order.id) ??
                                       order.copyWith(
-                                        status: DeliveryOrderStatus.outForDelivery,
+                                        status:
+                                            DeliveryOrderStatus.outForDelivery,
                                       );
 
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -751,8 +787,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                           isPickupAction
                               ? '🛵 Confirm Pickup'
                               : (order.orderType == 'pickup'
-                                  ? 'Complete Pickup'
-                                  : '✅ Confirm Delivered'),
+                                    ? 'Complete Pickup'
+                                    : '✅ Confirm Delivered'),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -813,8 +849,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   ),
                   IconButton(
                     icon: Icon(
-                      _isFlashOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                      color: _isFlashOn ? AppColors.tropicalYellow : Colors.white70,
+                      _isFlashOn
+                          ? Icons.flash_on_rounded
+                          : Icons.flash_off_rounded,
+                      color: _isFlashOn
+                          ? AppColors.tropicalYellow
+                          : Colors.white70,
                     ),
                     onPressed: () async {
                       setState(() => _isFlashOn = !_isFlashOn);
@@ -846,14 +886,16 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? (mode == ScanMode.pickup
-                                    ? AppColors.limeGreen
-                                    : (mode == ScanMode.dropoff
-                                        ? AppColors.oceanBlue
-                                        : AppColors.tropicalYellowDark))
+                                      ? AppColors.limeGreen
+                                      : (mode == ScanMode.dropoff
+                                            ? AppColors.oceanBlue
+                                            : AppColors.tropicalYellowDark))
                                 : Colors.white12,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: isSelected ? Colors.white38 : Colors.transparent,
+                              color: isSelected
+                                  ? Colors.white38
+                                  : Colors.transparent,
                             ),
                           ),
                           child: Row(
@@ -862,7 +904,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                               Icon(
                                 mode.icon,
                                 size: 14,
-                                color: isSelected ? Colors.white : Colors.white70,
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.white70,
                               ),
                               const SizedBox(width: 4),
                               Flexible(
@@ -872,8 +916,12 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                    color: isSelected ? Colors.white : Colors.white70,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.white70,
                                   ),
                                 ),
                               ),
@@ -894,22 +942,22 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               color: _selectedMode == ScanMode.pickup
                   ? AppColors.limeGreenLight
                   : (_selectedMode == ScanMode.dropoff
-                      ? AppColors.oceanBlueLight
-                      : AppColors.tropicalYellowLight),
+                        ? AppColors.oceanBlueLight
+                        : AppColors.tropicalYellowLight),
               child: Row(
                 children: [
                   Icon(
                     _selectedMode == ScanMode.pickup
                         ? Icons.inventory_2_rounded
                         : (_selectedMode == ScanMode.dropoff
-                            ? Icons.home_rounded
-                            : Icons.auto_awesome_rounded),
+                              ? Icons.home_rounded
+                              : Icons.auto_awesome_rounded),
                     size: 16,
                     color: _selectedMode == ScanMode.pickup
                         ? AppColors.limeGreenDark
                         : (_selectedMode == ScanMode.dropoff
-                            ? AppColors.oceanBlueDark
-                            : AppColors.tropicalYellowDark),
+                              ? AppColors.oceanBlueDark
+                              : AppColors.tropicalYellowDark),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -917,18 +965,18 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       widget.targetOrderCode != null
                           ? 'Target: ${widget.targetOrderCode} • Align code in frame'
                           : (_selectedMode == ScanMode.pickup
-                              ? 'Scan Kitchen Bag Barcode (KB-...) on food parcel'
-                              : (_selectedMode == ScanMode.dropoff
-                                  ? 'Scan Customer Delivery Pass (DROP-...) on customer phone'
-                                  : 'Auto Detect: Scan Kitchen Bag (KB-) or Customer Pass (DROP-)')),
+                                ? 'Scan Kitchen Bag Barcode (KB-...) on food parcel'
+                                : (_selectedMode == ScanMode.dropoff
+                                      ? 'Scan Customer Delivery Pass (DROP-...) on customer phone'
+                                      : 'Auto Detect: Scan Kitchen Bag (KB-) or Customer Pass (DROP-)')),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: _selectedMode == ScanMode.pickup
                             ? AppColors.limeGreenDark
                             : (_selectedMode == ScanMode.dropoff
-                                ? AppColors.oceanBlueDark
-                                : AppColors.tropicalYellowDark),
+                                  ? AppColors.oceanBlueDark
+                                  : AppColors.tropicalYellowDark),
                       ),
                     ),
                   ),
@@ -971,7 +1019,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                               Text(
                                 'Camera Ready\nAlign Barcode or QR code inside frame',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.white54, fontSize: 12),
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
@@ -1000,8 +1051,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                         color: _selectedMode == ScanMode.pickup
                             ? AppColors.limeGreen
                             : (_selectedMode == ScanMode.dropoff
-                                ? AppColors.oceanBlue
-                                : AppColors.tropicalYellow),
+                                  ? AppColors.oceanBlue
+                                  : AppColors.tropicalYellow),
                         width: 2.5,
                       ),
                     ),
@@ -1023,10 +1074,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                                       : AppColors.limeGreen,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: (_selectedMode == ScanMode.dropoff
-                                              ? AppColors.oceanBlue
-                                              : AppColors.limeGreen)
-                                          .withValues(alpha: 0.85),
+                                      color:
+                                          (_selectedMode == ScanMode.dropoff
+                                                  ? AppColors.oceanBlue
+                                                  : AppColors.limeGreen)
+                                              .withValues(alpha: 0.85),
                                       blurRadius: 10,
                                       spreadRadius: 3,
                                     ),
@@ -1138,7 +1190,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                   Positioned(
                     bottom: 24,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.75),
                         borderRadius: BorderRadius.circular(20),
@@ -1159,8 +1214,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                             _selectedMode == ScanMode.pickup
                                 ? 'Scan Kitchen Bag Barcode (KB-)'
                                 : (_selectedMode == ScanMode.dropoff
-                                    ? 'Scan Customer Pass (DROP-)'
-                                    : 'Point at Barcode or QR Code'),
+                                      ? 'Scan Customer Pass (DROP-)'
+                                      : 'Point at Barcode or QR Code'),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -1211,21 +1266,28 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: activeOrders.map((ord) {
-                          final isAssigned = ord.status == DeliveryOrderStatus.assigned;
+                          final isAssigned =
+                              ord.status == DeliveryOrderStatus.assigned;
                           return Padding(
                             padding: const EdgeInsets.only(right: 6),
                             child: ActionChip(
                               avatar: Icon(
-                                isAssigned ? Icons.moped_rounded : Icons.home_rounded,
+                                isAssigned
+                                    ? Icons.moped_rounded
+                                    : Icons.home_rounded,
                                 size: 14,
-                                color: isAssigned ? AppColors.limeGreenDark : AppColors.oceanBlueDark,
+                                color: isAssigned
+                                    ? AppColors.limeGreenDark
+                                    : AppColors.oceanBlueDark,
                               ),
                               label: Text(
                                 '${isAssigned ? "Pickup" : "Drop"} #${ord.id}',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: isAssigned ? AppColors.limeGreenDark : AppColors.oceanBlueDark,
+                                  color: isAssigned
+                                      ? AppColors.limeGreenDark
+                                      : AppColors.oceanBlueDark,
                                 ),
                               ),
                               backgroundColor: isAssigned
@@ -1234,13 +1296,17 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                               side: BorderSide(
                                 color: isAssigned
                                     ? AppColors.limeGreen.withValues(alpha: 0.3)
-                                    : AppColors.oceanBlue.withValues(alpha: 0.3),
+                                    : AppColors.oceanBlue.withValues(
+                                        alpha: 0.3,
+                                      ),
                               ),
                               onPressed: () {
                                 _validateAndShowScanResult(
                                   context,
                                   ord,
-                                  isAssigned ? ord.kitchenBagCode : ord.customerDropCode,
+                                  isAssigned
+                                      ? ord.kitchenBagCode
+                                      : ord.customerDropCode,
                                 );
                               },
                             ),
@@ -1262,17 +1328,22 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                             hintText: _selectedMode == ScanMode.pickup
                                 ? 'Enter KB- code (e.g. KB-...)'
                                 : (_selectedMode == ScanMode.dropoff
-                                    ? 'Enter DROP- code (e.g. DROP-...)'
-                                    : 'Enter Code (KB-... or DROP-...)'),
+                                      ? 'Enter DROP- code (e.g. DROP-...)'
+                                      : 'Enter Code (KB-... or DROP-...)'),
                             isDense: true,
-                            prefixIcon: const Icon(Icons.keyboard_alt_rounded, size: 18),
+                            prefixIcon: const Icon(
+                              Icons.keyboard_alt_rounded,
+                              size: 18,
+                            ),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: 12,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(color: AppColors.border),
+                              borderSide: const BorderSide(
+                                color: AppColors.border,
+                              ),
                             ),
                           ),
                         ),
