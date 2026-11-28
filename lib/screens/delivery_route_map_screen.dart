@@ -8,7 +8,6 @@ import '../core/constants/app_constants.dart';
 import '../core/constants/nassau_route_data.dart';
 import '../core/theme/app_colors.dart';
 import '../models/delivery_order.dart';
-import '../state/staff_app_state.dart';
 import '../state/staff_state_scope.dart';
 import 'barcode_scanner_screen.dart';
 
@@ -163,200 +162,6 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
     );
   }
 
-  void _showManualCodeEntryDialog(BuildContext context) {
-    final textController = TextEditingController();
-    bool isSubmitting = false;
-    String? errorMessage;
-
-    showDialog(
-      context: context,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Row(
-              children: [
-                Icon(Icons.pin_rounded, color: AppColors.oceanBlue),
-                SizedBox(width: 8),
-                Text(
-                  'Enter Drop Code',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Ask the customer for their Delivery Pass code (from customer app "View Delivery Pass"):',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: textController,
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: InputDecoration(
-                    labelText: 'Drop Pass Code',
-                    hintText: 'e.g. DROP-${widget.order.id}',
-                    prefixIcon: const Icon(Icons.qr_code_rounded),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    errorText: errorMessage,
-                  ),
-                ),
-                if (widget.order.requiresCashCollection) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.warningOrangeLight,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Cash to Collect (COD):',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.warningOrange,
-                          ),
-                        ),
-                        Text(
-                          '${AppConstants.currency}${widget.order.totalAmount.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogCtx).pop(),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.limeGreen,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: isSubmitting
-                    ? null
-                    : () async {
-                        final inputCode = textController.text
-                            .trim()
-                            .toUpperCase();
-                        if (inputCode.isEmpty) {
-                          setDialogState(
-                            () => errorMessage = 'Please enter a code',
-                          );
-                          return;
-                        }
-                        setDialogState(() {
-                          isSubmitting = true;
-                          errorMessage = null;
-                        });
-
-                        final navigator = Navigator.of(context);
-                        final messenger = ScaffoldMessenger.of(context);
-                        final dialogNav = Navigator.of(dialogCtx);
-                        final state = StaffStateScope.read(context);
-
-                        try {
-                          final verifiedOrder = await state
-                              .findOrderByCodeOrFetch(inputCode);
-                          if (verifiedOrder == null) {
-                            setDialogState(() {
-                              isSubmitting = false;
-                              errorMessage = 'Invalid code. Order not found.';
-                            });
-                            return;
-                          }
-
-                          if (verifiedOrder.id != widget.order.id) {
-                            setDialogState(() {
-                              isSubmitting = false;
-                              errorMessage =
-                                  'This code is for a different order (#${verifiedOrder.id}).';
-                            });
-                            return;
-                          }
-
-                          // Check if Kitchen Bag code was entered by mistake
-                          final isKitchenBagCode =
-                              inputCode.startsWith('KB') ||
-                              inputCode.contains('KB-') ||
-                              inputCode.contains('/KITCHEN');
-                          if (isKitchenBagCode) {
-                            setDialogState(() {
-                              isSubmitting = false;
-                              errorMessage =
-                                  'This is the kitchen pickup code. Please enter the Customer Delivery Pass code (DROP-${widget.order.id}).';
-                            });
-                            return;
-                          }
-
-                          // Success! Complete delivery
-                          state.markOrderDelivered(widget.order.id);
-                          dialogNav.pop();
-                          if (navigator.canPop()) {
-                            navigator.pop();
-                          }
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Order #${widget.order.id} verified and marked Delivered! 🎉',
-                              ),
-                              backgroundColor: AppColors.limeGreenDark,
-                            ),
-                          );
-                        } on OrderAssignmentException catch (e) {
-                          setDialogState(() {
-                            isSubmitting = false;
-                            errorMessage = e.message;
-                          });
-                        } catch (e) {
-                          setDialogState(() {
-                            isSubmitting = false;
-                            errorMessage = 'Verification failed: $e';
-                          });
-                        }
-                      },
-                child: isSubmitting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Verify & Deliver'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = StaffStateScope.of(context);
@@ -473,10 +278,10 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
             options: const MapOptions(
               initialCenter: initialCenter,
               initialZoom: 14.0,
-              minZoom: 11.0,
-              maxZoom: 18.0,
+              minZoom: 3.0,
+              maxZoom: 19.0,
               interactionOptions: InteractionOptions(
-                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                flags: InteractiveFlag.all,
               ),
             ),
             children: [
@@ -713,19 +518,135 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
             ),
           ),
 
-          // 3. Floating Recenter Courier Button
+          // 3. Floating Map Controls: Compass / Reset North, Zoom In, Zoom Out, Recenter
           Positioned(
-            right: 16,
-            bottom: 240,
-            child: FloatingActionButton.small(
-              backgroundColor: Colors.white,
-              foregroundColor: AppColors.oceanBlueDark,
-              elevation: 4,
-              onPressed: () {
-                final currentPos = _getCourierPosition(_animController.value);
-                _mapController.move(currentPos, 15.2);
-              },
-              child: const Icon(Icons.my_location_rounded),
+            right: 14,
+            bottom: 215,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Reset North / Compass button
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    iconSize: 22,
+                    tooltip: 'Reset North / Map Rotation',
+                    icon: const Icon(
+                      Icons.explore_rounded,
+                      color: AppColors.oceanBlue,
+                    ),
+                    onPressed: () {
+                      _mapController.rotate(0.0);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Zoom in / Zoom out container
+                Container(
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        iconSize: 20,
+                        tooltip: 'Zoom In',
+                        icon: const Icon(
+                          Icons.add_rounded,
+                          color: AppColors.textDark,
+                        ),
+                        onPressed: () {
+                          final currentZoom = _mapController.camera.zoom;
+                          final newZoom = (currentZoom + 1.0).clamp(3.0, 19.0);
+                          _mapController.move(
+                            _mapController.camera.center,
+                            newZoom,
+                          );
+                        },
+                      ),
+                      Container(
+                        height: 1,
+                        width: 24,
+                        color: AppColors.border,
+                      ),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        iconSize: 20,
+                        tooltip: 'Zoom Out',
+                        icon: const Icon(
+                          Icons.remove_rounded,
+                          color: AppColors.textDark,
+                        ),
+                        onPressed: () {
+                          final currentZoom = _mapController.camera.zoom;
+                          final newZoom = (currentZoom - 1.0).clamp(3.0, 19.0);
+                          _mapController.move(
+                            _mapController.camera.center,
+                            newZoom,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Recenter on courier
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    iconSize: 20,
+                    tooltip: 'Recenter on Courier',
+                    icon: const Icon(
+                      Icons.my_location_rounded,
+                      color: AppColors.limeGreenDark,
+                    ),
+                    onPressed: () {
+                      final currentPos =
+                          _getCourierPosition(_animController.value);
+                      _mapController.move(currentPos, 15.2);
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -907,7 +828,7 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Scan customer pass or enter code to complete delivery.',
+                                'Scan customer pass to complete delivery.',
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
@@ -952,36 +873,6 @@ class _DeliveryRouteMapScreenState extends State<DeliveryRouteMapScreen>
                                 ),
                               ),
                             );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Button 2: Enter Drop Code Manually
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          icon: const Icon(
-                            Icons.keyboard_alt_rounded,
-                            size: 18,
-                          ),
-                          label: const Text(
-                            'Enter Drop Code Manually',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.oceanBlue,
-                            side: const BorderSide(color: AppColors.oceanBlue),
-                            padding: const EdgeInsets.symmetric(vertical: 11),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () {
-                            _showManualCodeEntryDialog(context);
                           },
                         ),
                       ),
