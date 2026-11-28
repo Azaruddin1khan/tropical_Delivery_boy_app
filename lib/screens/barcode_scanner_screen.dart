@@ -9,20 +9,13 @@ import '../state/staff_state_scope.dart';
 import 'delivery_route_map_screen.dart';
 import 'order_details_screen.dart';
 
-enum ScanMode {
-  auto('Auto Detect', Icons.auto_awesome_rounded),
-  pickup('Kitchen Pickup', Icons.moped_rounded),
-  dropoff('Customer Dropoff', Icons.home_rounded);
-
-  final String title;
-  final IconData icon;
-  const ScanMode(this.title, this.icon);
-}
-
 class BarcodeScannerScreen extends StatefulWidget {
   final String? targetOrderCode;
 
-  const BarcodeScannerScreen({super.key, this.targetOrderCode});
+  const BarcodeScannerScreen({
+    super.key,
+    this.targetOrderCode,
+  });
 
   @override
   State<BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
@@ -36,25 +29,20 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
   bool _isFlashOn = false;
   bool _isProcessingScan = false;
-  late ScanMode _selectedMode;
+
+  bool get _isTargetPickup {
+    final t = widget.targetOrderCode?.toUpperCase() ?? '';
+    return t.startsWith('KB') || t.contains('KB-') || t.contains('/KITCHEN');
+  }
+
+  bool get _isTargetDrop {
+    final t = widget.targetOrderCode?.toUpperCase() ?? '';
+    return t.startsWith('DROP') || t.contains('DROP-') || t.contains('/DROP');
+  }
 
   @override
   void initState() {
     super.initState();
-
-    // Determine initial scan mode based on targetOrderCode
-    if (widget.targetOrderCode != null && widget.targetOrderCode!.isNotEmpty) {
-      final code = widget.targetOrderCode!.toUpperCase();
-      if (code.startsWith('KB') || code.contains('KB-')) {
-        _selectedMode = ScanMode.pickup;
-      } else if (code.startsWith('DROP') || code.contains('DROP-')) {
-        _selectedMode = ScanMode.dropoff;
-      } else {
-        _selectedMode = ScanMode.auto;
-      }
-    } else {
-      _selectedMode = ScanMode.auto;
-    }
 
     _animController = AnimationController(
       vsync: this,
@@ -171,57 +159,56 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
         upper.contains('DROP-') ||
         upper.contains('/DROP');
 
-    // 1. Explicit Mode: Kitchen Pickup
-    if (_selectedMode == ScanMode.pickup) {
-      if (isCustomerDropCode && !isKitchenBagCode) {
-        _showCodeMismatchDialog(
-          title: 'Customer Pass Scanned!',
-          description:
-              'You are in Kitchen Pickup mode, but scanned a Customer Delivery Pass.\n\nFor kitchen pickup, please scan the Kitchen Bag barcode (KB-${order.id}) affixed to the parcel bag in the kitchen.',
-          badgeText: 'WRONG CODE: NEED KITCHEN BAG',
-          badgeColor: AppColors.errorRed,
-        );
-        return false;
-      }
+    // 1. If target was explicitly Kitchen Bag, but user scanned customer drop pass
+    if (_isTargetPickup && isCustomerDropCode && !isKitchenBagCode) {
+      _showCodeMismatchDialog(
+        title: 'Customer Pass Scanned!',
+        description:
+            'You opened the scanner to pick up Order #${order.id} from the kitchen.\n\nPlease scan the Kitchen Bag barcode (KB-${order.id}) on the food parcel bag in the kitchen.',
+        badgeText: 'WRONG CODE: NEED KITCHEN BAG',
+        badgeColor: AppColors.errorRed,
+      );
+      return false;
     }
 
-    // 2. Explicit Mode: Customer Dropoff
-    if (_selectedMode == ScanMode.dropoff) {
-      if (isKitchenBagCode && !isCustomerDropCode) {
-        _showCodeMismatchDialog(
-          title: 'Kitchen Bag Scanned!',
-          description:
-              'You are in Customer Dropoff mode, but scanned the Kitchen Bag code.\n\nThis parcel has already been picked up. To complete delivery, scan the Customer Delivery Pass (DROP-${order.id}) from the customer\'s phone.',
-          badgeText: 'WRONG CODE: NEED CUSTOMER PASS',
-          badgeColor: AppColors.warningOrange,
-        );
-        return false;
-      }
+    // 2. If target was explicitly Customer Drop, but user scanned kitchen bag
+    if (_isTargetDrop && isKitchenBagCode && !isCustomerDropCode) {
+      _showCodeMismatchDialog(
+        title: 'Kitchen Bag Scanned!',
+        description:
+            'This parcel was already picked up from the kitchen.\n\nTo confirm doorstep delivery, please scan the Customer Delivery Pass (DROP-${order.id}) from the customer\'s phone.',
+        badgeText: 'WRONG CODE: NEED CUSTOMER PASS',
+        badgeColor: AppColors.warningOrange,
+      );
+      return false;
     }
 
-    // 3. Auto-Detect Mode
-    if (_selectedMode == ScanMode.auto) {
-      // If courier scanned a kitchen bag code, but order is already out for delivery
-      if (isKitchenBagCode &&
-          order.status == DeliveryOrderStatus.outForDelivery) {
-        _showCodeMismatchDialog(
-          title: 'Parcel Already Picked Up!',
-          description:
-              'Order #${order.id} was already picked up from the kitchen and is out for delivery!\n\nTo confirm doorstep delivery, please scan the Customer Delivery Pass (DROP-${order.id}) from the customer\'s phone.',
-          badgeText: 'ALREADY ON THE WAY',
-          badgeColor: AppColors.oceanBlue,
-        );
-        return false;
-      }
+    // 3. If scanned kitchen bag, but parcel was already out for delivery
+    if (isKitchenBagCode &&
+        order.status == DeliveryOrderStatus.outForDelivery &&
+        !_isTargetPickup) {
+      _showCodeMismatchDialog(
+        title: 'Parcel Already Picked Up!',
+        description:
+            'Order #${order.id} was already picked up from the kitchen and is out for delivery.\n\nTo confirm doorstep delivery, scan the Customer Delivery Pass (DROP-${order.id}) on the customer\'s phone.',
+        badgeText: 'ALREADY ON THE WAY',
+        badgeColor: AppColors.oceanBlue,
+      );
+      return false;
     }
 
-    // Determine action context
+    // Determine whether this action is Pickup or Drop:
+    // If it's a customer drop pass, or target was drop, or order is already outForDelivery -> Drop
     final isDropAction =
-        _selectedMode == ScanMode.dropoff ||
         isCustomerDropCode ||
+        _isTargetDrop ||
         order.status == DeliveryOrderStatus.outForDelivery;
 
-    _showScanResultBottomSheet(context, order, forceDropHandover: isDropAction);
+    _showScanResultBottomSheet(
+      context,
+      order,
+      forceDropHandover: isDropAction,
+    );
     return true;
   }
 
@@ -459,7 +446,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 ),
                 const SizedBox(height: 16),
 
-                // Action Title & Badge
+                // Action Title & Badge: Green for Pickup, Sky Blue for Drop
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -685,7 +672,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                 ],
                 const SizedBox(height: 16),
 
-                // Action Buttons
+                // Action Buttons: Green for Pickup, Sky Blue for Drop
                 Row(
                   children: [
                     Expanded(
@@ -714,10 +701,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isPickupAction
-                              ? AppColors.limeGreen
+                              ? AppColors.limeGreen // Green for Pickup
                               : (isDropAction && !isCashCollected
                                     ? Colors.grey
-                                    : AppColors.oceanBlue),
+                                    : AppColors.oceanBlue), // Sky Blue for Drop
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -811,18 +798,20 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
 
   @override
   Widget build(BuildContext context) {
-    final state = StaffStateScope.of(context);
-    final activeOrders = state.assignedOrders;
+    // Determine Theme Color: Green for Pickup, Sky Blue for Drop, Neutral Yellow for general
+    final themeColor = _isTargetPickup
+        ? AppColors.limeGreen
+        : (_isTargetDrop ? AppColors.oceanBlue : AppColors.tropicalYellow);
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
           children: [
-            // 1. Top Bar: Title, Back & Flash Toggle
+            // 1. Top Bar: Back, Title & Flash Toggle
             Container(
               color: Colors.black87,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -839,7 +828,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
-                      'Barcode & QR Scanner',
+                      'Scan Order Barcode / QR',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -867,116 +856,44 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               ),
             ),
 
-            // 2. Scan Mode Selector Pills
-            Container(
-              color: Colors.black87,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: Row(
-                children: ScanMode.values.map((mode) {
-                  final isSelected = _selectedMode == mode;
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 3),
-                      child: InkWell(
-                        onTap: () => setState(() => _selectedMode = mode),
-                        borderRadius: BorderRadius.circular(20),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? (mode == ScanMode.pickup
-                                      ? AppColors.limeGreen
-                                      : (mode == ScanMode.dropoff
-                                            ? AppColors.oceanBlue
-                                            : AppColors.tropicalYellowDark))
-                                : Colors.white12,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected
-                                  ? Colors.white38
-                                  : Colors.transparent,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                mode.icon,
-                                size: 14,
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.white70,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  mode.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.white70,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-
-            // 3. Guidance Banner
+            // 2. Context Indicator Banner (Green for Pickup, Sky Blue for Drop)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: _selectedMode == ScanMode.pickup
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              color: _isTargetPickup
                   ? AppColors.limeGreenLight
-                  : (_selectedMode == ScanMode.dropoff
+                  : (_isTargetDrop
                         ? AppColors.oceanBlueLight
-                        : AppColors.tropicalYellowLight),
+                        : const Color(0xFF1E293B)),
               child: Row(
                 children: [
                   Icon(
-                    _selectedMode == ScanMode.pickup
+                    _isTargetPickup
                         ? Icons.inventory_2_rounded
-                        : (_selectedMode == ScanMode.dropoff
+                        : (_isTargetDrop
                               ? Icons.home_rounded
-                              : Icons.auto_awesome_rounded),
+                              : Icons.qr_code_scanner_rounded),
                     size: 16,
-                    color: _selectedMode == ScanMode.pickup
+                    color: _isTargetPickup
                         ? AppColors.limeGreenDark
-                        : (_selectedMode == ScanMode.dropoff
-                              ? AppColors.oceanBlueDark
-                              : AppColors.tropicalYellowDark),
+                        : (_isTargetDrop ? AppColors.oceanBlueDark : Colors.white70),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       widget.targetOrderCode != null
-                          ? 'Target: ${widget.targetOrderCode} • Align code in frame'
-                          : (_selectedMode == ScanMode.pickup
-                                ? 'Scan Kitchen Bag Barcode (KB-...) on food parcel'
-                                : (_selectedMode == ScanMode.dropoff
-                                      ? 'Scan Customer Delivery Pass (DROP-...) on customer phone'
-                                      : 'Auto Detect: Scan Kitchen Bag (KB-) or Customer Pass (DROP-)')),
+                          ? (_isTargetPickup
+                                ? 'Target Kitchen Bag: ${widget.targetOrderCode} • Scan parcel bag barcode'
+                                : 'Target Customer Pass: ${widget.targetOrderCode} • Scan customer phone QR')
+                          : 'Point camera at Kitchen Bag Barcode (KB-) or Customer Pass (DROP-)',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: _selectedMode == ScanMode.pickup
+                        color: _isTargetPickup
                             ? AppColors.limeGreenDark
-                            : (_selectedMode == ScanMode.dropoff
+                            : (_isTargetDrop
                                   ? AppColors.oceanBlueDark
-                                  : AppColors.tropicalYellowDark),
+                                  : Colors.white),
                       ),
                     ),
                   ),
@@ -984,7 +901,7 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               ),
             ),
 
-            // 4. Live Camera Viewfinder
+            // 3. Live Camera Viewfinder
             Expanded(
               child: Stack(
                 alignment: Alignment.center,
@@ -1040,21 +957,14 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                     ),
                   ),
 
-                  // Viewfinder Frame
+                  // Viewfinder Frame (Styled dynamically with Green or Sky Blue theme)
                   Container(
                     width: 270,
                     height: 270,
                     decoration: BoxDecoration(
                       color: Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _selectedMode == ScanMode.pickup
-                            ? AppColors.limeGreen
-                            : (_selectedMode == ScanMode.dropoff
-                                  ? AppColors.oceanBlue
-                                  : AppColors.tropicalYellow),
-                        width: 2.5,
-                      ),
+                      border: Border.all(color: themeColor, width: 2.5),
                     ),
                     child: Stack(
                       children: [
@@ -1069,16 +979,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                               child: Container(
                                 height: 3.5,
                                 decoration: BoxDecoration(
-                                  color: _selectedMode == ScanMode.dropoff
-                                      ? AppColors.oceanBlue
-                                      : AppColors.limeGreen,
+                                  color: themeColor,
                                   boxShadow: [
                                     BoxShadow(
-                                      color:
-                                          (_selectedMode == ScanMode.dropoff
-                                                  ? AppColors.oceanBlue
-                                                  : AppColors.limeGreen)
-                                              .withValues(alpha: 0.85),
+                                      color: themeColor.withValues(alpha: 0.85),
                                       blurRadius: 10,
                                       spreadRadius: 3,
                                     ),
@@ -1097,18 +1001,8 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                             height: 26,
                             decoration: BoxDecoration(
                               border: Border(
-                                top: BorderSide(
-                                  color: _selectedMode == ScanMode.dropoff
-                                      ? AppColors.oceanBlue
-                                      : AppColors.tropicalYellow,
-                                  width: 4.5,
-                                ),
-                                left: BorderSide(
-                                  color: _selectedMode == ScanMode.dropoff
-                                      ? AppColors.oceanBlue
-                                      : AppColors.tropicalYellow,
-                                  width: 4.5,
-                                ),
+                                top: BorderSide(color: themeColor, width: 4.5),
+                                left: BorderSide(color: themeColor, width: 4.5),
                               ),
                             ),
                           ),
@@ -1120,16 +1014,9 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                             height: 26,
                             decoration: BoxDecoration(
                               border: Border(
-                                top: BorderSide(
-                                  color: _selectedMode == ScanMode.dropoff
-                                      ? AppColors.oceanBlue
-                                      : AppColors.tropicalYellow,
-                                  width: 4.5,
-                                ),
+                                top: BorderSide(color: themeColor, width: 4.5),
                                 right: BorderSide(
-                                  color: _selectedMode == ScanMode.dropoff
-                                      ? AppColors.oceanBlue
-                                      : AppColors.tropicalYellow,
+                                  color: themeColor,
                                   width: 4.5,
                                 ),
                               ),
@@ -1144,17 +1031,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                             decoration: BoxDecoration(
                               border: Border(
                                 bottom: BorderSide(
-                                  color: _selectedMode == ScanMode.dropoff
-                                      ? AppColors.oceanBlue
-                                      : AppColors.tropicalYellow,
+                                  color: themeColor,
                                   width: 4.5,
                                 ),
-                                left: BorderSide(
-                                  color: _selectedMode == ScanMode.dropoff
-                                      ? AppColors.oceanBlue
-                                      : AppColors.tropicalYellow,
-                                  width: 4.5,
-                                ),
+                                left: BorderSide(color: themeColor, width: 4.5),
                               ),
                             ),
                           ),
@@ -1167,15 +1047,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                             decoration: BoxDecoration(
                               border: Border(
                                 bottom: BorderSide(
-                                  color: _selectedMode == ScanMode.dropoff
-                                      ? AppColors.oceanBlue
-                                      : AppColors.tropicalYellow,
+                                  color: themeColor,
                                   width: 4.5,
                                 ),
                                 right: BorderSide(
-                                  color: _selectedMode == ScanMode.dropoff
-                                      ? AppColors.oceanBlue
-                                      : AppColors.tropicalYellow,
+                                  color: themeColor,
                                   width: 4.5,
                                 ),
                               ),
@@ -1204,18 +1080,16 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                         children: [
                           Icon(
                             Icons.center_focus_strong,
-                            color: _selectedMode == ScanMode.dropoff
-                                ? AppColors.oceanBlue
-                                : AppColors.limeGreen,
+                            color: themeColor,
                             size: 16,
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            _selectedMode == ScanMode.pickup
-                                ? 'Scan Kitchen Bag Barcode (KB-)'
-                                : (_selectedMode == ScanMode.dropoff
-                                      ? 'Scan Customer Pass (DROP-)'
-                                      : 'Point at Barcode or QR Code'),
+                            _isTargetPickup
+                                ? 'Align Kitchen Bag Barcode (KB-)'
+                                : (_isTargetDrop
+                                      ? 'Align Customer Pass (DROP-)'
+                                      : 'Point camera at Barcode / QR'),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -1230,94 +1104,23 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
               ),
             ),
 
-            // 5. Bottom Card: Active Shortcuts & Manual Entry
+            // 4. Bottom Card: Manual Code Entry ONLY (NO bypass tap buttons!)
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Active Orders Quick Tap Chips (if courier has assigned orders)
-                  if (activeOrders.isNotEmpty) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Your Active Deliveries:',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        Text(
-                          '${activeOrders.length} active',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.oceanBlue,
-                          ),
-                        ),
-                      ],
+                  const Text(
+                    'Manual Code Entry',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
                     ),
-                    const SizedBox(height: 6),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: activeOrders.map((ord) {
-                          final isAssigned =
-                              ord.status == DeliveryOrderStatus.assigned;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: ActionChip(
-                              avatar: Icon(
-                                isAssigned
-                                    ? Icons.moped_rounded
-                                    : Icons.home_rounded,
-                                size: 14,
-                                color: isAssigned
-                                    ? AppColors.limeGreenDark
-                                    : AppColors.oceanBlueDark,
-                              ),
-                              label: Text(
-                                '${isAssigned ? "Pickup" : "Drop"} #${ord.id}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: isAssigned
-                                      ? AppColors.limeGreenDark
-                                      : AppColors.oceanBlueDark,
-                                ),
-                              ),
-                              backgroundColor: isAssigned
-                                  ? AppColors.limeGreenLight
-                                  : AppColors.oceanBlueLight,
-                              side: BorderSide(
-                                color: isAssigned
-                                    ? AppColors.limeGreen.withValues(alpha: 0.3)
-                                    : AppColors.oceanBlue.withValues(
-                                        alpha: 0.3,
-                                      ),
-                              ),
-                              onPressed: () {
-                                _validateAndShowScanResult(
-                                  context,
-                                  ord,
-                                  isAssigned
-                                      ? ord.kitchenBagCode
-                                      : ord.customerDropCode,
-                                );
-                              },
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-
-                  // Manual Text Entry
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
@@ -1325,10 +1128,10 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                           controller: _manualInputController,
                           textCapitalization: TextCapitalization.characters,
                           decoration: InputDecoration(
-                            hintText: _selectedMode == ScanMode.pickup
-                                ? 'Enter KB- code (e.g. KB-...)'
-                                : (_selectedMode == ScanMode.dropoff
-                                      ? 'Enter DROP- code (e.g. DROP-...)'
+                            hintText: _isTargetPickup
+                                ? 'Enter KB- code (e.g. KB-TRP-...)'
+                                : (_isTargetDrop
+                                      ? 'Enter DROP- code (e.g. DROP-TRP-...)'
                                       : 'Enter Code (KB-... or DROP-...)'),
                             isDense: true,
                             prefixIcon: const Icon(
@@ -1351,9 +1154,11 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen>
                       const SizedBox(width: 8),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _selectedMode == ScanMode.pickup
+                          backgroundColor: _isTargetPickup
                               ? AppColors.limeGreen
-                              : AppColors.oceanBlue,
+                              : (_isTargetDrop
+                                    ? AppColors.oceanBlue
+                                    : AppColors.textDark),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 20,
